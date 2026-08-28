@@ -4,9 +4,7 @@
 
 | Issue | Severity | Status |
 |---|---|---|
-| No test files — `bun run test` exits with code 1 | High | Fixed — 46 tests across 5 spec files |
 | Multi-line YAML subtitle parsing truncates at first continuation line | Medium | Open — `parseFrontmatter` regex `(?=^\S)` matches continuation lines as new keys. Single-line subtitles work. |
-| `freedium.service.ts` does not check `error` field in `__data.json` chunk | Medium | Fixed — checks `eager.error` before accessing article, throws with status + message |
 | Freedium `/api/download` intermittently returns 502 | Low | External — retry logic handles it when mirror is up |
 
 ## Not yet implemented
