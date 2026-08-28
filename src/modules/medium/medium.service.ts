@@ -101,11 +101,19 @@ export class MediumService implements Provider {
 
   private parseFrontmatter(yaml: string): Partial<ArticleMetadata> {
     const get = (key: string): string | undefined => {
-      // Match key: value, handling multi-line single-quoted YAML strings.
-      // (?![\s\S]) = end of string in JS (no \Z support); ^\S = next top-level key
-      const match = yaml.match(new RegExp(`^${key}:\\s*(.+?)(?=^\\S|(?![\\s\\S]))`, "ms"));
-      if (!match) return undefined;
-      return this.stripYamlQuotes((match[1] ?? "").trim());
+      // Single-quoted: match opening ' to closing ' (handles multi-line, '' escaping)
+      const singleMatch = yaml.match(new RegExp(`^${key}:\\s*('(?:[^']|'')*')`, "m"));
+      if (singleMatch) return this.stripYamlQuotes(singleMatch[1] ?? "");
+
+      // Double-quoted: match opening " to closing " (handles multi-line, \" escaping)
+      const doubleMatch = yaml.match(new RegExp(`^${key}:\\s*("(?:[^"\\\\]|\\\\.)*")`, "m"));
+      if (doubleMatch) return this.stripYamlQuotes(doubleMatch[1] ?? "");
+
+      // Unquoted: match until end of line
+      const plainMatch = yaml.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
+      if (plainMatch) return (plainMatch[1] ?? "").trim();
+
+      return undefined;
     };
 
     const getBool = (key: string): boolean | undefined => {

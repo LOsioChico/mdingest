@@ -154,6 +154,44 @@ describe("MediumService.convert", () => {
     });
   });
 
+  describe("multi-line subtitle parsing", () => {
+    it("parses single-quoted multi-line subtitle without truncation", async () => {
+      const multiLineMd = `---
+title: "Test Article"
+subtitle: 'Line 1
+Line 2'
+published: "2026-01-15"
+source_url: "https://medium.com/@user/test-article"
+---
+
+# Test Article
+
+Body text.`;
+      const service = makeService(multiLineMd, null);
+      const result = await service.convert("https://medium.com/@user/test-article");
+
+      expect(result.metadata.subtitle).toBe("Line 1\nLine 2");
+    });
+
+    it("parses double-quoted multi-line subtitle without truncation", async () => {
+      const multiLineMd = `---
+title: "Test Article"
+subtitle: "Line 1
+Line 2"
+published: "2026-01-15"
+source_url: "https://medium.com/@user/test-article"
+---
+
+# Test Article
+
+Body text.`;
+      const service = makeService(multiLineMd, null);
+      const result = await service.convert("https://medium.com/@user/test-article");
+
+      expect(result.metadata.subtitle).toBe("Line 1\nLine 2");
+    });
+  });
+
   describe("matches()", () => {
     it("returns true for medium.com URL", () => {
       const service = makeService("", null);

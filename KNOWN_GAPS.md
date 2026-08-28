@@ -4,7 +4,6 @@
 
 | Issue | Severity | Status |
 |---|---|---|
-| Multi-line YAML subtitle parsing truncates at first continuation line | Medium | Open — `parseFrontmatter` regex `(?=^\S)` matches continuation lines as new keys. Single-line subtitles work. |
 | Freedium `/api/download` intermittently returns 502 | Low | External — retry logic handles it when mirror is up |
 
 ## Not yet implemented
