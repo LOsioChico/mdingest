@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxlint/oxlint/main/npm/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": "error",
+    "no-default-export": "error",
+    "prefer-const": "error",
+    "no-explicit-any": "warn",
+    "no-extraneous-class": ["warn", { "allowWithDecorator": true }],
+    "preserve-caught-error": "warn"
+  }
+}

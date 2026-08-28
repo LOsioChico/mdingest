@@ -1,0 +1,20 @@
+name = "mdingest"
+main = "src/worker.ts"
+compatibility_date = "2026-08-28"
+
+# Cloudflare Containers: a Worker routes requests to the NestJS + Bun container.
+# The container runs the Dockerfile, the Worker forwards HTTP to it.
+
+[[containers]]
+class_name = "MdingestContainer"
+image = "./Dockerfile"
+max_instances = 1
+instance_type = "basic"
+
+[[durable_objects.bindings]]
+name = "MDINGEST_CONTAINER"
+class_name = "MdingestContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MdingestContainer"]
