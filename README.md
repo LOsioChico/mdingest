@@ -1,10 +1,9 @@
 # mdingest
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Runtime: Bun](https://img.shields.io/badge/Runtime-Bun-000000.svg)](https://bun.sh)
-[![Framework: NestJS](https://img.shields.io/badge/Framework-NestJS-e0234e.svg)](https://nestjs.com)
-[![Deployed: Cloudflare](https://img.shields.io/badge/Deployed-Cloudflare-F38020.svg)](https://mdingest.knightker.workers.dev)
-[![TypeScript: strict](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](tsconfig.json)
+[![CI](https://img.shields.io/github/actions/workflow/status/LOsioChico/mdingest/ci.yml?style=flat-square&label=CI)](https://github.com/LOsioChico/mdingest/actions)
+[![License: MIT](https://img.shields.io/github/license/LOsioChico/mdingest?style=flat-square)](LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg?url=https://deepwiki.com/LOsioChico/mdingest)](https://deepwiki.com/LOsioChico/mdingest)
+[![Last Commit](https://img.shields.io/github/last-commit/LOsioChico/mdingest?style=flat-square)](https://github.com/LOsioChico/mdingest/commits)
 
 API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
 
