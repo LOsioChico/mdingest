@@ -144,6 +144,17 @@ export class FreediumService {
       throw new Error("Freedium data: no eager field");
     }
 
+    // SvelteKit streaming format: error field present when article fetch failed
+    // (404, paywall bypass failure, etc.) — check before accessing article
+    const eagerError = this.resolveRef(eager.error, nodeData) as
+      | Record<string, unknown>
+      | undefined;
+    if (eagerError) {
+      const status = eagerError.status ?? "unknown";
+      const message = typeof eagerError.message === "string" ? eagerError.message : "Freedium article fetch failed";
+      throw new Error(`Freedium data error (status ${status}): ${message}`);
+    }
+
     const article = this.resolveRef(eager.article, nodeData) as
       | Record<string, unknown>
       | undefined;
