@@ -78,11 +78,10 @@ function formatYamlValue(value: string): string {
 
 /**
  * Format a multi-line YAML string (for subtitle).
- * Uses YAML block scalar style.
+ * Uses single-quoted YAML style — newlines preserved literally, single quotes escaped as ''.
  */
 function formatYamlMultiline(value: string): string {
   if (value.includes("\n")) {
-    // Single-quoted YAML style — newlines preserved literally, single quotes escaped as ''
     const escaped = value.replace(/'/g, "''");
     return `'${escaped}'`;
   }
