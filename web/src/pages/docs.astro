@@ -4,9 +4,11 @@ import { BASE_URL, PROVIDERS, ERROR_CODES, FRONTMATTER_FIELDS } from '@shared/pr
 ---
 <Base title="API Docs: mdingest" description="mdingest API reference: endpoints, parameters, response formats, and error codes">
 
-  <section class="section container docs">
+  <section class="section">
+    <div class="container docs">
     <p class="eyebrow">reference</p>
     <h1>API Docs</h1>
+    <p class="docs-intro">REST API, CLI, and MCP server. Or use the <a href="/ingest">web interface</a>.</p>
 
     <h2>Base URL</h2>
     <div class="terminal" data-copy-content={BASE_URL}>
@@ -25,7 +27,6 @@ import { BASE_URL, PROVIDERS, ERROR_CODES, FRONTMATTER_FIELDS } from '@shared/pr
     </div>
 
     <h2>Endpoints</h2>
-    <p>Try it interactively at <a href="/ingest">/ingest</a>.</p>
     <p>All endpoints share the same query parameters:</p>
     <table class="table">
       <thead>
@@ -224,6 +225,7 @@ Article body in clean Markdown...</span></pre>
       <li><strong>Dev.to</strong>: Public Forem API. No restrictions. Returns native Markdown.</li>
       <li><strong>Substack</strong>: Public Substack API. Posts not available for conversion return <code>SUBSTACK.PAID_POST</code> (403).</li>
     </ul>
+    </div>
   </section>
 </Base>
 
@@ -242,8 +244,11 @@ Article body in clean Markdown...</span></pre>
 </script>
 
 <style>
-  .docs { max-width: var(--max-content); }
-  .docs h1 { margin-bottom: var(--space-8); }
+  .docs h1 { margin-bottom: var(--space-3); }
+  .docs-intro {
+    color: var(--ink-muted);
+    margin-bottom: var(--space-8);
+  }
   .docs h2 {
     margin-top: var(--space-16);
     margin-bottom: var(--space-4);
