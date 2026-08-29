@@ -196,6 +196,7 @@ web/                 Astro static site (React islands)
     *.md             Markdown twins of each HTML page (index.md, ingest.md, docs.md)
     .well-known/
       ai-catalog.json          AI Catalog — domain-level agent discovery
+      api-catalog              RFC 9727 API Catalog (linkset+json)
       mcp/server-card.json     MCP Server Card — pre-connection MCP client metadata
 ```
 
@@ -260,7 +261,7 @@ The `verify` script runs `impeccable` to scan the built frontend for UI anti-pat
 | MCP server (HTTP) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; same tools; initialize handshake + session ID; all 3 providers verified |
 | Rate limiting | Runtime-verified | Global `RateLimitGuard` via `APP_GUARD` — 30 req/min per IP; 31st request returns 429 `{ code: "RATE_LIMITED", details: { retryAfter } }` |
 | LLM visibility | Runtime-verified | `robots.txt` + `llms.txt` + `llms-full.txt` + `.md` routes for all 3 pages + `Accept: text/markdown` content negotiation + `Link` headers + `Vary: Accept` + sitemap + FAQ on landing page. 6 Evil Martians techniques implemented. |
-| Agent discovery | Runtime-verified | `.well-known/mcp/server-card.json` (MCP Server Card) + `.well-known/ai-catalog.json` (AI Catalog). isitagentready.com: Agent-Readable L3. |
+| Agent discovery | Runtime-verified | `.well-known/mcp/server-card.json` (MCP Server Card) + `.well-known/ai-catalog.json` (AI Catalog) + `.well-known/api-catalog` (RFC 9727 linkset). isitagentready.com: Agent-Readable L3. |
 
 ## Development
 

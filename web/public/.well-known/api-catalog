@@ -1,0 +1,22 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://mdingest.knightker.workers.dev",
+      "service-desc": [
+        { "href": "https://mdingest.knightker.workers.dev/docs", "type": "text/html" }
+      ],
+      "service-doc": [
+        { "href": "https://mdingest.knightker.workers.dev/docs.md", "type": "text/markdown" }
+      ],
+      "describedby": [
+        { "href": "https://mdingest.knightker.workers.dev/llms.txt", "type": "text/markdown" }
+      ],
+      "alternate": [
+        { "href": "https://mdingest.knightker.workers.dev/.well-known/mcp/server-card.json", "type": "application/json" }
+      ],
+      "sitemap": [
+        { "href": "https://mdingest.knightker.workers.dev/sitemap-index.xml", "type": "application/xml" }
+      ]
+    }
+  ]
+}

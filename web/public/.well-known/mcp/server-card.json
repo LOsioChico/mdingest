@@ -1,14 +1,26 @@
 {
-  "name": "mdingest",
-  "version": "1.0.0",
-  "title": "mdingest — Article to Markdown ingestion",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "serverInfo": {
+    "name": "mdingest",
+    "title": "mdingest — Article to Markdown ingestion",
+    "version": "1.0.0"
+  },
   "description": "Ingest blog, article, and newsletter pages from Medium, Dev.to, and Substack into clean Markdown with YAML frontmatter. Built for LLM consumption, RAG pipelines, and deep research workflows.",
   "websiteUrl": "https://mdingest.knightker.workers.dev",
   "repository": {
     "url": "https://github.com/LOsioChico/mdingest",
     "source": "github"
   },
-  "transports": [
+  "transport": {
+    "type": "streamable-http",
+    "endpoint": "https://mdingest.knightker.workers.dev/v1/mcp"
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "remotes": [
     {
       "type": "streamable-http",
       "url": "https://mdingest.knightker.workers.dev/v1/mcp",

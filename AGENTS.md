@@ -291,7 +291,8 @@ web/
     docs.md              Markdown twin of docs page
     .well-known/
       ai-catalog.json    AI Catalog — domain-level discovery of agent capabilities (MCP, A2A)
-      mcp/server-card.json  MCP Server Card — pre-connection metadata for MCP clients
+      api-catalog        RFC 9727 API Catalog — linkset+json pointing to service-desc, sitemap, llms.txt
+      mcp/server-card.json  MCP Server Card — pre-connection metadata for MCP clients (serverInfo + transport + capabilities)
   src/
     components/
       CodeBlock.astro    Terminal-style code block with copy button (currently unused)
@@ -414,7 +415,8 @@ Additional LLM visibility features:
 - Freshness signal: "Last updated: 2026-08-29" in footer
 - `@astrojs/sitemap` generates `sitemap-index.xml` + `sitemap-0.xml` at build time
 - `.well-known/ai-catalog.json` — AI Catalog for domain-level agent discovery (links to MCP Server Card)
-- `.well-known/mcp/server-card.json` — MCP Server Card for pre-connection MCP client discovery
+- `.well-known/mcp/server-card.json` — MCP Server Card for pre-connection MCP client discovery (`serverInfo.name` + `transport` + `capabilities`)
+- `.well-known/api-catalog` — RFC 9727 API Catalog served as `application/linkset+json` (linkset pointing to service-desc, sitemap, llms.txt). Extensionless file served via Fastify hook since `@fastify/static` can't set the correct Content-Type. Advertised via `Link: </.well-known/api-catalog>; rel="api-catalog"` header on all HTML pages.
 
 **Anti-patterns refused** (no evidence they work): `<meta name="ai-content-url">`, `ai.txt`, HTML comments for AI, AI toggle buttons, User-Agent sniffing (cloaking), JSON-LD for LLM visibility.
 
@@ -539,7 +541,7 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 | MCP server (HTTP) (`src/mcp.controller.ts`) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; initialize handshake returns session ID; `tools/list` returns both tools; `ingest_article` with real URL → markdown text, `isError: false`; bad URL → `isError: true` with `[CODE] message`; `list_providers` → 3 providers with metadata + 42 Medium domains |
 | Rate limiting (`src/common/guards/rate-limit.guard.ts`) | Runtime-verified | Global `RateLimitGuard` via `APP_GUARD` — 30 req/min per IP; 31st request returns 429 `{ code: "RATE_LIMITED", message, details: { retryAfter }, traceId }`; `trustProxy: true` reads real IP from `x-forwarded-for` |
 | LLM visibility (`src/common/llm-visibility.ts`) | Runtime-verified | `curl /index.md` → 200 `text/markdown`; `curl -H "Accept: text/markdown" /` → markdown (content negotiation); `curl -H "Accept: text/html" /` → HTML; q-value test passes; `Link` + `Vary: Accept` headers on all pages; 406 for `Accept: application/json` on web pages; `.well-known/` paths skip negotiation (404 not 406); `robots.txt` + `llms.txt` + `llms-full.txt` + sitemap all served |
-| Agent discovery (`.well-known/`) | Runtime-verified | `curl /.well-known/mcp/server-card.json` → 200 `application/json` (MCP Server Card); `curl /.well-known/ai-catalog.json` → 200 `application/json` (AI Catalog with MCP entry); isitagentready.com scan: Agent-Readable L3, 7/7 discoverability + content + bot access checks pass |
+| Agent discovery (`.well-known/`) | Runtime-verified | `curl /.well-known/mcp/server-card.json` → 200 `application/json` (MCP Server Card with serverInfo.name + transport + capabilities); `curl /.well-known/ai-catalog.json` → 200 `application/json` (AI Catalog with MCP entry); `curl /.well-known/api-catalog` → 200 `application/linkset+json` (RFC 9727 linkset); `Link: </.well-known/api-catalog>; rel="api-catalog"` header on all HTML pages; isitagentready.com scan: Agent-Readable L3 |
 
 HTTP API runs on Cloudflare Containers. A Worker (`src/worker.ts`) routes all requests
 to a NestJS + Bun Docker container. The Worker extends the `Container` class from

@@ -81,7 +81,19 @@ export function createLlmVisibilityHook(webDist: string) {
     if (path.startsWith("/v1/") || path.startsWith("/_astro/")) return;
     if (path.includes("/icons/") || path.endsWith(".svg") || path.endsWith(".css") || path.endsWith(".js")) return;
     // Skip .well-known — these are machine-readable endpoints, not HTML pages
-    if (path.startsWith("/.well-known/")) return;
+    // Exception: api-catalog has no extension, @fastify/static won't set the right
+    // Content-Type, so we serve it here with application/linkset+json (RFC 9727)
+    if (path.startsWith("/.well-known/")) {
+      if (path === "/.well-known/api-catalog") {
+        const catalogFile = join(webDist, ".well-known", "api-catalog");
+        if (existsSync(catalogFile)) {
+          const content = await readFile(catalogFile, "utf-8");
+          reply.header("Content-Type", "application/linkset+json; charset=utf-8");
+          return reply.send(content);
+        }
+      }
+      return;
+    }
 
     const isMdUrl = path.endsWith(".md");
 
@@ -122,7 +134,10 @@ export function createLlmVisibilityHook(webDist: string) {
 
     // Set Vary and Link on all HTML responses
     reply.header("Vary", "Accept");
-    reply.header("Link", `<${mdPath}>; rel="alternate"; type="text/markdown"`);
+    reply.header(
+      "Link",
+      `<${mdPath}>; rel="alternate"; type="text/markdown", </.well-known/api-catalog>; rel="api-catalog"`,
+    );
 
     // Serve markdown if explicitly requested and preferred (or tied)
     if (hasExplicitType(accept, "text/markdown") && mdQ >= htmlQ) {
