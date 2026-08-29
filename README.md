@@ -165,6 +165,7 @@ src/
     pipes/          ZodValidationPipe (validates controller input)
     filters/        AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
     guards/         RateLimitGuard (30 req/min per IP, global via APP_GUARD)
+    llm-visibility.ts  Fastify preHandler: Accept: text/markdown negotiation, Link headers, Vary, 406
     errors/         shapeError() — shared error shaping (filter, CLI, MCP)
   modules/
     medium/         Medium feature: controller, service, DTOs, errors
@@ -189,6 +190,13 @@ web/                 Astro static site (React islands)
     styles/         global.css — design tokens, base styles, shared components
   public/
     icons/          Provider SVG logos (medium, devto, substack)
+    robots.txt      Allow all crawlers + Content-Signal directive + sitemap reference
+    llms.txt        Curated markdown index for AI-mediated conversations
+    llms-full.txt   All 3 pages concatenated for single-fetch LLM ingestion
+    *.md             Markdown twins of each HTML page (index.md, ingest.md, docs.md)
+    .well-known/
+      ai-catalog.json          AI Catalog — domain-level agent discovery
+      mcp/server-card.json     MCP Server Card — pre-connection MCP client metadata
 ```
 
 Four entry points share the same ingestion logic via `src/ingest.ts`:
@@ -227,6 +235,7 @@ Errors return `{ code, message, details?, traceId }` with namespaced codes (`MED
 | Tool | Role |
 |---|---|
 | Astro | Static site generator with React island support |
+| @astrojs/sitemap | Sitemap generation (sitemap-index.xml + sitemap-0.xml) |
 | React | Interactive islands (Ingestor component) |
 | motion | Enter/exit animations |
 | lucide-react + @lucide/astro | Icons |
@@ -250,6 +259,8 @@ The `verify` script runs `impeccable` to scan the built frontend for UI anti-pat
 | MCP server (stdio) | Runtime-verified | `bun run src/cli.ts mcp` → stdio JSON-RPC; `ingest_article` + `list_providers` tools; all 3 providers verified |
 | MCP server (HTTP) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; same tools; initialize handshake + session ID; all 3 providers verified |
 | Rate limiting | Runtime-verified | Global `RateLimitGuard` via `APP_GUARD` — 30 req/min per IP; 31st request returns 429 `{ code: "RATE_LIMITED", details: { retryAfter } }` |
+| LLM visibility | Runtime-verified | `robots.txt` + `llms.txt` + `llms-full.txt` + `.md` routes for all 3 pages + `Accept: text/markdown` content negotiation + `Link` headers + `Vary: Accept` + sitemap + FAQ on landing page. 6 Evil Martians techniques implemented. |
+| Agent discovery | Runtime-verified | `.well-known/mcp/server-card.json` (MCP Server Card) + `.well-known/ai-catalog.json` (AI Catalog). isitagentready.com: Agent-Readable L3. |
 
 ## Development
 

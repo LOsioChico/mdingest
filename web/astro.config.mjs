@@ -1,10 +1,15 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import sitemap from '@astrojs/sitemap';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   output: 'static',
-  integrations: [react()],
+  site: 'https://mdingest.knightker.workers.dev',
+  integrations: [
+    react(),
+    sitemap(),
+  ],
   build: {
     format: 'directory',
     inlineStylesheets: 'always',

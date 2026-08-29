@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@astrojs/react": "6.0.4",
+    "@astrojs/sitemap": "3.7.3",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/geist-mono": "5.3.0",
     "@lucide/astro": "1.33.0",

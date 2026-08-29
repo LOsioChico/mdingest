@@ -26,6 +26,10 @@ try {
 
 const ogTitle = title;
 const ogImage = `${BASE_URL}/og.svg`;
+
+// Compute .md alternate path for this page
+const pathName = Astro.url.pathname.replace(/\/$/, '');
+const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
 ---
 <!doctype html>
 <html lang="en">
@@ -47,9 +51,15 @@ const ogImage = `${BASE_URL}/og.svg`;
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
 
+    <!-- LLM visibility: advertise markdown alternate -->
+    <link rel="alternate" type="text/markdown" href={mdPath} />
+
     <ClientRouter />
   </head>
   <body>
+    <div class="visually-hidden" aria-hidden="true">
+      A Markdown version of this page is available at {BASE_URL}{mdPath} — optimized for AI and LLM tools.
+    </div>
     <header class="site-header" transition:persist>
       <div class="container site-header-inner">
         <a href="/" class="wordmark">
@@ -102,6 +112,7 @@ const ogImage = `${BASE_URL}/og.svg`;
             <a href={GITHUB_PROFILE_URL} rel="noopener" class="footer-author">
               Built by LOsioChico <Heart size={11} class="footer-heart" />
             </a>
+            <span class="footer-updated">Last updated: 2026-08-29</span>
             <ChevronRight size={11} class="footer-sep-icon" />
             <div class="footer-stack">
               <a href="https://bun.sh" rel="noopener" class="stack-link" title="Bun">
@@ -130,6 +141,20 @@ const ogImage = `${BASE_URL}/og.svg`;
     </footer>
 
     <style>
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .footer-updated {
+        color: var(--ink-dim);
+        font-size: var(--text-xs);
+      }
       .site-header {
         position: sticky;
         top: 0;

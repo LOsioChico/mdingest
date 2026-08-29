@@ -1,0 +1,22 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "mdingest",
+    "identifier": "did:web:mdingest.knightker.workers.dev",
+    "documentationUrl": "https://mdingest.knightker.workers.dev/docs"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:mdingest.knightker.workers.dev:mcp:ingest",
+      "displayName": "mdingest MCP Server",
+      "type": "application/mcp-server-card+json",
+      "mediaType": "application/mcp-server-card+json",
+      "url": "https://mdingest.knightker.workers.dev/.well-known/mcp/server-card.json",
+      "representativeQueries": [
+        "Ingest this Medium article into clean Markdown",
+        "Convert a Substack post to Markdown with frontmatter",
+        "Fetch a Dev.to article as structured markdown"
+      ]
+    }
+  ]
+}

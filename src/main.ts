@@ -11,6 +11,7 @@ import fastifyStatic from "@fastify/static";
 import { AppModule } from "./app.module.ts";
 import { config } from "./core/config/config.ts";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.ts";
+import { createLlmVisibilityHook } from "./common/llm-visibility.ts";
 
 /**
  * Bootstrap: NestJS + Fastify on Bun runtime.
@@ -46,6 +47,12 @@ async function bootstrap(): Promise<void> {
       root: webDist,
       prefix: "/",
     });
+
+    // LLM visibility: Accept: text/markdown content negotiation + Link headers.
+    // preHandler runs before @fastify/static's wildcard — if reply.send() is
+    // called, the static handler is skipped. Otherwise falls through to HTML.
+    const fastifyInstance = app.getHttpAdapter().getInstance();
+    fastifyInstance.addHook("preHandler", createLlmVisibilityHook(webDist));
   }
 
   app.enableShutdownHooks();

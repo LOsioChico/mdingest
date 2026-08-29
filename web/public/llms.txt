@@ -1,0 +1,26 @@
+# mdingest
+
+> API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion. Supports Medium (via Freedium), Dev.to (Forem API), and Substack (free posts). Four entry points: HTTP API, CLI, MCP server (stdio), MCP server (HTTP).
+
+## Docs
+
+- [API Reference](/docs.md): Full endpoint documentation, query parameters, response formats, CLI usage, MCP server setup, error codes, provider notes
+- [Ingest Tool](/ingest.md): Interactive ingestion tool — paste a URL, get clean Markdown or JSON
+
+## API Endpoints
+
+- [Medium](/v1/medium?url=...): Ingest Medium articles via Freedium mirror. 42 accepted domains. Returns markdown with YAML frontmatter (title, author, dates, reading_time, tags, cover_image).
+- [Dev.to](/v1/devto?url=...): Ingest Dev.to articles via public Forem API. No restrictions. Returns native markdown + metadata.
+- [Substack](/v1/substack?url=...): Ingest Substack free posts via public API. Paid posts return SUBSTACK.PAID_POST (403).
+
+## Entry Points
+
+- HTTP API: `https://mdingest.knightker.workers.dev/v1/{provider}?url=...`
+- CLI: `bun run src/cli.ts <url>` → markdown to stdout
+- MCP server (remote): `{ "url": "https://mdingest.knightker.workers.dev/v1/mcp" }`
+- MCP server (local): `bun run src/cli.ts mcp`
+
+## Optional
+
+- [Full site content](/llms-full.txt): All pages concatenated into one markdown file
+- [GitHub source](https://github.com/LOsioChico/mdingest): MIT licensed, self-hostable, deployable on Cloudflare

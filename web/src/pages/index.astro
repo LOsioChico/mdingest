@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import ArrowRight from '@lucide/astro/icons/arrow-right';
 import ChevronRight from '@lucide/astro/icons/chevron-right';
+import ChevronDown from '@lucide/astro/icons/chevron-down';
 import LockOpen from '@lucide/astro/icons/lock-open';
 import Broom from '@lucide/astro/icons/broom';
 import Braces from '@lucide/astro/icons/braces';
@@ -195,6 +196,79 @@ Full article body in clean Markdown...</span></pre>
       <p class="section-link">
         <a href="/docs">Read the API docs →</a>
       </p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">faq</p>
+      <h2>Common questions</h2>
+      <div class="faq">
+        <details>
+          <summary>
+            <span>What is mdingest?</span>
+            <ChevronDown size={16} class="faq-chevron" />
+          </summary>
+          <div class="faq-answer">
+            <p>mdingest is an API that converts blog, article, and newsletter pages from Medium, Dev.to, and Substack into clean Markdown with YAML frontmatter. It strips ads, navigation, and UI noise so the output is ready for LLM ingestion, RAG pipelines, or reading.</p>
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span>What sources are supported?</span>
+            <ChevronDown size={16} class="faq-chevron" />
+          </summary>
+          <div class="faq-answer">
+            <p>Three sources: Medium (via Freedium mirror, 42 accepted domains including custom domains like <code>itnext.io</code> and <code>towardsdatascience.com</code>), Dev.to (via public Forem API), and Substack (via public API, free posts only).</p>
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span>Can I use this for RAG?</span>
+            <ChevronDown size={16} class="faq-chevron" />
+          </summary>
+          <div class="faq-answer">
+            <p>Yes. The default output is clean Markdown with structured YAML frontmatter (title, author, dates, reading time, tags, cover image). Drop it directly into your vector database, LLM context window, or CI pipeline. Use <code>format=json</code> to get <code>{'{ metadata, markdown }'}</code> as separate fields.</p>
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span>Is there a rate limit?</span>
+            <ChevronDown size={16} class="faq-chevron" />
+          </summary>
+          <div class="faq-answer">
+            <p>Yes. 30 requests per minute per IP. When exceeded, the API returns HTTP 429 with <code>{'{ code: "RATE_LIMITED", details: { retryAfter } }'}</code> where <code>retryAfter</code> is seconds until the limit resets.</p>
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span>Can I self-host?</span>
+            <ChevronDown size={16} class="faq-chevron" />
+          </summary>
+          <div class="faq-answer">
+            <p>Yes. The entire codebase is MIT licensed and on <a href={GITHUB_URL} rel="noopener">GitHub</a>. Deploy it on Cloudflare Containers (Worker + Docker container), or run it locally with <code>bun run dev</code>. The CLI and MCP server work standalone without the HTTP server.</p>
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span>Does it work with paywalled Medium articles?</span>
+            <ChevronDown size={16} class="faq-chevron" />
+          </summary>
+          <div class="faq-answer">
+            <p>Yes. Medium articles are fetched via the Freedium mirror, which provides full article content regardless of Medium's paywall. The dual-source approach combines the download endpoint (markdown body, tags, dates) with the <code>__data.json</code> endpoint (author, reading time, cover image).</p>
+          </div>
+        </details>
+        <details>
+          <summary>
+            <span>Does it work with paid Substack posts?</span>
+            <ChevronDown size={16} class="faq-chevron" />
+          </summary>
+          <div class="faq-answer">
+            <p>No. Substack's public API only returns full content for free posts. Paid posts are server-side truncated, so the API returns <code>SUBSTACK.PAID_POST</code> (403) when a post is behind the paywall. Only free Substack posts can be converted.</p>
+          </div>
+        </details>
+      </div>
     </div>
   </section>
 
@@ -401,5 +475,66 @@ Full article body in clean Markdown...</span></pre>
     .source-endpoint { grid-column: 2; font-size: var(--text-sm); }
     .source-desc { grid-column: 2; }
     .source-arrow { grid-column: 3; grid-row: 1 / span 4; align-self: center; }
+  }
+
+  .faq {
+    margin-top: var(--space-8);
+    max-width: var(--max-prose);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .faq details {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    transition: background var(--duration-fast) var(--ease-out);
+  }
+  .faq details:last-child { border-bottom: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .faq details:hover { background: var(--bg-surface); }
+  }
+  .faq details[open] { background: var(--bg-surface); }
+  .faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq-chevron {
+    color: var(--ink-dim);
+    flex-shrink: 0;
+    transition: transform var(--duration-normal) var(--ease-out),
+                color var(--duration-fast) var(--ease-out);
+  }
+  .faq details[open] .faq-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .faq summary:hover .faq-chevron { color: var(--accent); }
+  }
+  .faq-answer {
+    margin-top: var(--space-3);
+  }
+  .faq-answer p {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+  .faq-answer code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--ink);
+  }
+  .faq-answer a {
+    color: var(--accent);
   }
 </style>

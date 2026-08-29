@@ -100,6 +100,7 @@ common/types/         → Shared types: ArticleMetadata schema, Provider interfa
 common/pipes/         → ZodValidationPipe (validates controller input)
 common/filters/       → AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
 common/guards/        → RateLimitGuard (30 req/min per IP, global via APP_GUARD)
+common/llm-visibility/→ Fastify preHandler hook: Accept: text/markdown negotiation, Link headers, Vary, 406
 common/errors/        → shapeError() — shared error shaping (filter, CLI, MCP)
 modules/medium/       → Medium feature: controller, service, DTOs, errors
 modules/devto/        → Dev.to feature: controller, service, DTOs, errors
@@ -282,6 +283,15 @@ web/
     favicon.svg          SVG favicon — accent-colored rounded square with white "m"
     og.svg               Open Graph image
     icons/               Provider SVG logos (medium, devto, substack, bun, cloudflare, nestjs)
+    robots.txt           Allow all crawlers + Content-Signal directive + sitemap reference
+    llms.txt             Curated markdown index for AI-mediated conversations
+    llms-full.txt        All 3 pages concatenated for single-fetch LLM ingestion
+    index.md             Markdown twin of homepage (for .md route + content negotiation)
+    ingest.md            Markdown twin of ingest page
+    docs.md              Markdown twin of docs page
+    .well-known/
+      ai-catalog.json    AI Catalog — domain-level discovery of agent capabilities (MCP, A2A)
+      mcp/server-card.json  MCP Server Card — pre-connection metadata for MCP clients
   src/
     components/
       CodeBlock.astro    Terminal-style code block with copy button (currently unused)
@@ -290,7 +300,7 @@ web/
     layouts/
       Base.astro         Shared layout — header (sticky, backdrop-blur), footer, meta tags
     pages/
-      index.astro        Landing page — hero, the problem, supported sources, three access methods (HTTP API, CLI, MCP), source code
+      index.astro        Landing page — hero, the problem, supported sources, three access methods (HTTP API, CLI, MCP), FAQ (7 items), source code
       ingest.astro       Ingest page — Ingestor island + supported sources + output formats
       docs.astro         API documentation — endpoints, response formats, error codes (incl. RATE_LIMITED), frontmatter fields, CLI usage, MCP server config + tools, /ingest link
     styles/
@@ -302,7 +312,8 @@ web/
 | Setting | Value | Purpose |
 |---|---|---|
 | `output` | `'static'` | Static site generation (no SSR) |
-| `integrations` | `[react()]` | React island support via `@astrojs/react` |
+| `site` | `'https://mdingest.knightker.workers.dev'` | Canonical URL — required by `@astrojs/sitemap` for absolute URLs in sitemap |
+| `integrations` | `[react(), sitemap()]` | React island support + sitemap generation (`sitemap-index.xml` + `sitemap-0.xml`) |
 | `build.format` | `'directory'` | Directory-based output (`/ingest/index.html`) |
 | `build.inlineStylesheets` | `'always'` | Inline all CSS — no external stylesheet requests |
 | `devToolbar` | `{ enabled: false }` | Disable Astro dev toolbar in dev mode |
@@ -377,6 +388,36 @@ for UI anti-patterns:
 - `--accent-hover` changed from darker (58%) to lighter (68%) — dark bg means hover should brighten
 - Explicit `line-height: 1.5` added to `.lead`, `.btn`, and form element resets
 
+### LLM visibility (`common/llm-visibility.ts`)
+
+The marketing site practices what the API preaches — clean Markdown for LLM ingestion.
+Implements the 6 proven techniques from [Evil Martians](https://evilmartians.com/chronicles/how-to-make-your-website-visible-to-llms):
+
+| Technique | Implementation |
+|---|---|
+| `robots.txt` | `web/public/robots.txt` — allow all + `Content-Signal: search=yes, ai-input=yes, ai-train=yes` + sitemap reference |
+| `llms.txt` | `web/public/llms.txt` — curated markdown index (README for AI-mediated conversations, not a sitemap) |
+| `.md` routes | `web/public/{index,ingest,docs}.md` — markdown twins of each HTML page, served at `/{page}.md` |
+| `Link` headers | Fastify `preHandler` hook sets `Link: <{path}.md>; rel="alternate"; type="text/markdown"` on all HTML responses, and reverse link on `.md` responses |
+| Hidden pointer | `<div class="visually-hidden">` in `Base.astro` — announces `.md` URL to scrapers that read DOM text |
+| Content negotiation | `Accept: text/markdown` → serves `.md` file instead of HTML. Uses q-value comparison (not substring). `hasExplicitType` guard prevents `*/*` (browsers) from flipping to markdown. 406 only when path has a `.md` twin and neither HTML nor markdown is acceptable. `.well-known/` paths skip negotiation entirely (machine-readable endpoints, not HTML pages). |
+
+**Why a Fastify hook, not Astro:** Astro `output: 'static'` generates HTML files only. Content negotiation and `Link` headers must happen at request time, so they live in the Fastify server that serves the static files.
+
+**Why `preHandler`:** Runs before `@fastify/static`'s wildcard handler. If `reply.send()` is called, the static handler is skipped. If the hook returns without sending, the request falls through to static file serving.
+
+Additional LLM visibility features:
+- `llms-full.txt` — all 3 pages concatenated for single-fetch ingestion (3-4x more traffic than `llms.txt` per Mintlify CDN analysis)
+- `<link rel="alternate" type="text/markdown">` in HTML `<head>` (Base.astro)
+- `Vary: Accept` on all web responses
+- FAQ section on landing page (7 Q&A pairs in `<details>`/`<summary>` — text in DOM regardless of collapse state)
+- Freshness signal: "Last updated: 2026-08-29" in footer
+- `@astrojs/sitemap` generates `sitemap-index.xml` + `sitemap-0.xml` at build time
+- `.well-known/ai-catalog.json` — AI Catalog for domain-level agent discovery (links to MCP Server Card)
+- `.well-known/mcp/server-card.json` — MCP Server Card for pre-connection MCP client discovery
+
+**Anti-patterns refused** (no evidence they work): `<meta name="ai-content-url">`, `ai.txt`, HTML comments for AI, AI toggle buttons, User-Agent sniffing (cloaking), JSON-LD for LLM visibility.
+
 ## Dependencies and why each
 
 ### Backend (`package.json`)
@@ -405,6 +446,7 @@ for UI anti-patterns:
 |---|---|---|
 | `astro` | Static site generator with React island support | Next.js is heavier. Astro gives zero-JS by default with selective hydration. 7.2.9. |
 | `@astrojs/react` | React integration for Astro islands | Required for `Ingestor.tsx` (client:load). 6.0.4. |
+| `@astrojs/sitemap` | Sitemap generation for search engines + AI crawlers | Generates `sitemap-index.xml` + `sitemap-0.xml` at build time. Referenced from `robots.txt`. Required `site` config option for absolute URLs. 3.7.3. |
 | `react` + `react-dom` | UI library for interactive islands | Needed for the Ingestor component (state, effects, animations). 19.2.8. |
 | `motion` | Animation library (framer-motion successor) | Used for enter/exit animations on results and errors. 13.1.1. |
 | `lucide-react` | Icon library (React) | Used in Ingestor for Copy, Download, AlertCircle, etc. 1.33.0. |
@@ -496,6 +538,8 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 | MCP server (stdio) (`src/cli.ts mcp`) | Runtime-verified | `bun run src/cli.ts mcp` → stdio JSON-RPC; two tools: `ingest_article` (auto-detect, markdown default, `json: true` for structured) + `list_providers` (discover sources + example URLs) |
 | MCP server (HTTP) (`src/mcp.controller.ts`) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; initialize handshake returns session ID; `tools/list` returns both tools; `ingest_article` with real URL → markdown text, `isError: false`; bad URL → `isError: true` with `[CODE] message`; `list_providers` → 3 providers with metadata + 42 Medium domains |
 | Rate limiting (`src/common/guards/rate-limit.guard.ts`) | Runtime-verified | Global `RateLimitGuard` via `APP_GUARD` — 30 req/min per IP; 31st request returns 429 `{ code: "RATE_LIMITED", message, details: { retryAfter }, traceId }`; `trustProxy: true` reads real IP from `x-forwarded-for` |
+| LLM visibility (`src/common/llm-visibility.ts`) | Runtime-verified | `curl /index.md` → 200 `text/markdown`; `curl -H "Accept: text/markdown" /` → markdown (content negotiation); `curl -H "Accept: text/html" /` → HTML; q-value test passes; `Link` + `Vary: Accept` headers on all pages; 406 for `Accept: application/json` on web pages; `.well-known/` paths skip negotiation (404 not 406); `robots.txt` + `llms.txt` + `llms-full.txt` + sitemap all served |
+| Agent discovery (`.well-known/`) | Runtime-verified | `curl /.well-known/mcp/server-card.json` → 200 `application/json` (MCP Server Card); `curl /.well-known/ai-catalog.json` → 200 `application/json` (AI Catalog with MCP entry); isitagentready.com scan: Agent-Readable L3, 7/7 discoverability + content + bot access checks pass |
 
 HTTP API runs on Cloudflare Containers. A Worker (`src/worker.ts`) routes all requests
 to a NestJS + Bun Docker container. The Worker extends the `Container` class from
