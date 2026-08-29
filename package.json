@@ -5,6 +5,9 @@
   "type": "module",
   "private": true,
   "license": "MIT",
+  "bin": {
+    "mdingest": "src/cli.ts"
+  },
   "author": "Luis Osio Chico <osiochico@gmail.com>",
   "keywords": [
     "markdown",
@@ -35,14 +38,18 @@
     "lint": "oxlint",
     "verify": "tsc --noEmit && oxlint && npx impeccable detect web/dist/",
     "build:web": "cd web && bun run build",
-    "dev:web": "cd web && bun run dev"
+    "dev:web": "cd web && bun run dev",
+    "cli": "bun run src/cli.ts",
+    "mcp": "bun run src/cli.ts mcp"
   },
   "dependencies": {
     "@cloudflare/containers": "^0.3.7",
     "@fastify/static": "10.1.3",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@nestjs/common": "^12.0.0",
     "@nestjs/core": "^12.0.0",
     "@nestjs/platform-fastify": "^12.0.0",
+    "citty": "^0.2.2",
     "fastify": "^5.0.0",
     "lru-cache": "11.5.2",
     "turndown": "7.2.4",
