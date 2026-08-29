@@ -4,6 +4,7 @@ import {
   type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import { VersioningType } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { AppModule } from "./app.module.ts";
 import { config } from "./core/config/config.ts";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.ts";
@@ -17,7 +18,10 @@ import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.ts";
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: false }),
+    new FastifyAdapter({
+      logger: false,
+      genReqId: () => randomUUID(),
+    }),
   );
 
   app.enableVersioning({

@@ -174,6 +174,7 @@ All errors follow the standard shape: `{ code, message, details?, traceId }`
 | `SUBSTACK.UNAVAILABLE` | 503 | Substack API down or timed out |
 | `SUBSTACK.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
 | `INTERNAL.ERROR` | 500 | Unexpected error |
+| `NOT_FOUND` | 404 | Unknown route (NestJS NotFoundException) |
 
 Typed domain errors in `modules/<provider>/errors/` extend semantic Nest exceptions
 (`BadRequestException`, `ForbiddenException`, `ServiceUnavailableException`, `BadGatewayException`).

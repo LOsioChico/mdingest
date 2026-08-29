@@ -47,15 +47,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // Our typed errors pass an object: { code, message, details? }
       if (typeof response === "object" && response !== null) {
         const r = response as Record<string, unknown>;
+        const fallbackCode = status === HttpStatus.NOT_FOUND
+          ? "NOT_FOUND"
+          : "INTERNAL.ERROR";
         body = {
-          code: (r.code as string) ?? "INTERNAL.ERROR",
+          code: (r.code as string) ?? fallbackCode,
           message: (r.message as string) ?? exception.message,
           details: r.details,
           traceId,
         };
       } else {
+        const code = status === HttpStatus.NOT_FOUND ? "NOT_FOUND" : "INTERNAL.ERROR";
         body = {
-          code: "INTERNAL.ERROR",
+          code,
           message: typeof response === "string" ? response : exception.message,
           traceId,
         };
