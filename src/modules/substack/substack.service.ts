@@ -4,7 +4,7 @@ import { CacheService } from "../../core/cache/cache.service.ts";
 import { config } from "../../core/config/config.ts";
 import { buildFrontmatter, type ArticleMetadata } from "../../common/types/metadata.types.ts";
 import type { ConvertResult, Provider } from "../../common/types/provider.interface.ts";
-import { isValidSubstackUrl, parseSubstackUrl } from "./substack.dto.ts";
+import { isValidSubstackUrl, isSubstackHomeUrl, parseSubstackUrl } from "./substack.dto.ts";
 import {
   SubstackInvalidUrlError,
   SubstackPaidPostError,
@@ -60,33 +60,69 @@ export class SubstackService implements Provider {
       throw new SubstackInvalidUrlError(url);
     }
 
-    const cached = this.cache.get(url);
-    if (cached) {
-      this.logger.log(`Cache hit: ${url}`);
-      return this.parseCachedResult(cached, url);
+    // Resolve /home/post/p-{id} redirects to real article URLs
+    let resolvedUrl = url;
+    if (isSubstackHomeUrl(url)) {
+      resolvedUrl = await this.resolveHomeUrl(url);
     }
 
-    this.logger.log(`Cache miss, fetching: ${url}`);
+    const cached = this.cache.get(resolvedUrl);
+    if (cached) {
+      this.logger.log(`Cache hit: ${resolvedUrl}`);
+      return this.parseCachedResult(cached, resolvedUrl);
+    }
 
-    const post = await this.fetchPost(url);
+    this.logger.log(`Cache miss, fetching: ${resolvedUrl}`);
+
+    const post = await this.fetchPost(resolvedUrl);
 
     if (post.audience === "only_paid") {
-      throw new SubstackPaidPostError(url);
+      throw new SubstackPaidPostError(resolvedUrl);
     }
 
     const preprocessed = this.preprocessHtml(post.body_html);
     const body = this.turndown.turndown(preprocessed);
     const cleanBody = this.cleanupMarkdown(body);
-    const metadata = this.buildMetadata(post, url);
+    const metadata = this.buildMetadata(post, resolvedUrl);
     const bodyWithCover = this.injectCoverImage(cleanBody, post.cover_image);
     const fullMarkdown = `${buildFrontmatter(metadata)}\n\n${bodyWithCover}\n`;
 
-    this.cache.set(url, fullMarkdown);
+    this.cache.set(resolvedUrl, fullMarkdown);
 
     return { metadata, markdown: fullMarkdown };
   }
 
   // --- API fetch ---
+
+  /**
+   * Resolves a /home/post/p-{id} URL by following the redirect
+   * to the real article URL (https://{pub}.substack.com/p/{slug}).
+   */
+  private async resolveHomeUrl(url: string): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        headers: { "User-Agent": config.userAgent },
+        signal: controller.signal,
+        redirect: "manual",
+      });
+
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new SubstackUnavailableError(url);
+      }
+
+      this.logger.log(`Resolved home URL: ${url} → ${location}`);
+      return location;
+    } catch (error) {
+      if (error instanceof SubstackUnavailableError) throw error;
+      throw new SubstackUnavailableError(url);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   private async fetchPost(url: string): Promise<SubstackPostResponse> {
     const parsed = parseSubstackUrl(url);
