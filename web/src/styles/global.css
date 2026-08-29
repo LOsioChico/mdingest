@@ -120,6 +120,7 @@ code, pre {
 .section {
   padding: var(--space-16) 0;
 }
+.section:first-child { padding-top: var(--space-24); }
 .section + .section { padding-top: 0; }
 
 /* ── Components ───────────────────────────────────────────────── */
