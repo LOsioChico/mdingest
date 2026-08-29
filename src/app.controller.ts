@@ -19,9 +19,9 @@ const apiInfo: ApiInfo = {
   name: pkg.name,
   version: `v${API_VERSION}`,
   endpoints: {
-    medium: `/v${API_VERSION}/medium?url=<article-url>`,
-    devto: `/v${API_VERSION}/devto?url=<article-url>`,
-    substack: `/v${API_VERSION}/substack?url=<article-url>`,
+    medium: `/v${API_VERSION}/medium?url=article-url`,
+    devto: `/v${API_VERSION}/devto?url=article-url`,
+    substack: `/v${API_VERSION}/substack?url=article-url`,
   },
   source: sourceUrl,
 };

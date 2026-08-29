@@ -2,6 +2,9 @@ name = "mdingest"
 main = "src/worker.ts"
 compatibility_date = "2026-08-28"
 
+[observability]
+enabled = true
+
 # Cloudflare Containers: a Worker routes requests to the NestJS + Bun container.
 # The container runs the Dockerfile, the Worker forwards HTTP to it.
 
