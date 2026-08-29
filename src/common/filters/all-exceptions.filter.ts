@@ -8,21 +8,18 @@ import {
 } from "@nestjs/common";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { randomUUID } from "node:crypto";
+import { shapeError, type ShapedError } from "../errors/shape-error.ts";
 
 /**
  * Global exception filter.
  * Shapes every error into the standard contract:
  *   { code, message, details?, traceId }
  *
- * - HttpException: use the embedded status + code + message + details
- * - Everything else: 500 with code INTERNAL.ERROR
- * - traceId is generated per error and logged for correlation
+ * Delegates error→{code, message, details?} mapping to shapeError()
+ * (shared with CLI + MCP). This filter adds traceId, HTTP status, and logging.
  */
 
-interface StandardErrorBody {
-  code: string;
-  message: string;
-  details?: unknown;
+interface StandardErrorBody extends ShapedError {
   traceId: string;
 }
 
@@ -37,46 +34,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const traceId = (request.id as string | undefined) ?? randomUUID();
 
-    let status: number;
-    let body: StandardErrorBody;
+    const shaped = shapeError(exception);
+    const status = exception instanceof HttpException
+      ? exception.getStatus()
+      : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const response = exception.getResponse();
+    const body: StandardErrorBody = { ...shaped, traceId };
 
-      // Our typed errors pass an object: { code, message, details? }
-      if (typeof response === "object" && response !== null) {
-        const r = response as Record<string, unknown>;
-        const fallbackCode = status === HttpStatus.NOT_FOUND
-          ? "NOT_FOUND"
-          : "INTERNAL.ERROR";
-        body = {
-          code: (r.code as string) ?? fallbackCode,
-          message: (r.message as string) ?? exception.message,
-          details: r.details,
-          traceId,
-        };
-      } else {
-        const code = status === HttpStatus.NOT_FOUND ? "NOT_FOUND" : "INTERNAL.ERROR";
-        body = {
-          code,
-          message: typeof response === "string" ? response : exception.message,
-          traceId,
-        };
-      }
+    // Log 5xx with stack
+    if (status >= 500) {
+      this.logger.error(
+        `[${traceId}] ${shaped.message}`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
     } else {
-      status = HttpStatus.INTERNAL_SERVER_ERROR;
-      const message =
-        exception instanceof Error ? exception.message : "Internal server error";
-      body = { code: "INTERNAL.ERROR", message, traceId };
-
-      // Log 5xx with stack
-      this.logger.error(`[${traceId}] ${message}`, exception instanceof Error ? exception.stack : undefined);
-    }
-
-    // Log 4xx only at debug (expected client errors)
-    if (status < 500) {
-      this.logger.debug(`[${traceId}] ${body.code}: ${body.message}`);
+      // Log 4xx only at debug (expected client errors)
+      this.logger.debug(`[${traceId}] ${shaped.code}: ${shaped.message}`);
     }
 
     reply.status(status).header("Content-Type", "application/json").send(body);
