@@ -173,7 +173,7 @@ We use two Freedium endpoints: `/api/download` (finished markdown) and `__data.j
 | HTTP API | Deployed | `https://mdingest.knightker.workers.dev/v1/medium?url=...` — Cloudflare Containers |
 | CLI | Planned | `bun run src/cli.ts <url>` — direct `new` services, print markdown |
 | MCP server | Planned | Expose `convert_article` tool — same services, `@modelcontextprotocol/sdk` |
-| Additional providers | Planned | Substack, Dev.to — new folder under `modules/` |
+| Additional providers | Researched | Substack, Dev.to — new folder under `modules/`. Research: [`docs/substack-extraction.md`](docs/substack-extraction.md), [`docs/devto-extraction.md`](docs/devto-extraction.md) |
 
 ## Development
 
