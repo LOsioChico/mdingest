@@ -1,8 +1,35 @@
 # Substack extraction — free vs paid posts
 
 > Reference for the Substack provider (implemented). Documents what the API
-> returns, the hard limit on paid content, and the full content fidelity
-> analysis for free posts.
+> returns, the hard limit on paid content, URL resolution, and the full
+> content fidelity analysis for free posts.
+
+## Accepted URL formats
+
+The provider accepts two URL patterns:
+
+| Pattern | Example | Handling |
+|---|---|---|
+| Publication URL | `https://{pub}.substack.com/p/{slug}` | Direct API fetch |
+| Custom domain URL | `https://www.noahpinion.blog/p/{slug}` | Direct API fetch |
+| Reader/home URL | `https://substack.com/home/post/p-{id}` | 302 redirect resolution → publication URL |
+
+### Home URL resolution
+
+Reader URLs (`https://substack.com/home/post/p-{id}`) are Substack's internal
+dashboard links. They redirect (HTTP 302) to the real publication URL.
+
+The service resolves this before fetching the API:
+
+1. `isSubstackHomeUrl(url)` → detects `/home/post/p-{id}` pattern
+2. `resolveHomeUrl(url)` → `fetch(url, { redirect: "manual" })` → extract `Location` header
+3. `fetchPost(resolvedUrl)` → normal API flow
+
+Verified: `https://substack.com/home/post/p-212696442` → 302 → `https://hayksimonyan.substack.com/p/design-google-docs-like-a-senior-e65` → HTTP 200 with full article.
+
+URL detection is centralized in `shared/providers.ts` (`detectProvider`) — the Substack
+DTO's `isValidSubstackUrl` delegates to it. Both `/p/{slug}` and `/home/post/p-{id}`
+patterns are recognized as Substack.
 
 ## How to identify free vs paid posts
 

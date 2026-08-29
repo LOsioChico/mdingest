@@ -1,6 +1,6 @@
 # AGENTS.md — mdingest Operating Contract
 
-> API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
+> API that ingests blog/article/newsletter pages to clean Markdown for LLM consumption.
 > Currently supports Medium (via Freedium), Dev.to (via Forem API),
 > and Substack (free posts via public API + HTML→Markdown).
 > Designed for future providers.
@@ -32,9 +32,27 @@ Read this file before writing code.
 - Functional style: pure functions where possible, no classes except NestJS modules/services/controllers.
 - Use TypeScript features: type narrowing, discriminated unions, `satisfies`, `as const`.
 
+## Terminology
+
+This project uses **ingest** terminology, not "convert":
+
+| Term | Use | Don't use |
+|---|---|---|
+| Feature name | ingest | convert |
+| UI component | `Ingestor.tsx` | `Converter.tsx` |
+| Route | `/ingest` | `/convert` |
+| Function | `handleIngest` | `handleConvert` |
+| Result type | `IngestResult` | `ConvertResult` |
+| CSS class | `ingestor-*` | `converter-*` |
+| Button text | "Ingest" | "Convert" |
+
+The `Provider` interface still uses `convert(url)` as the method name — this is the
+internal API contract and changing it would break all services. The rename is
+UI/facing only.
+
 ## What this project is
 
-An API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
+An API that ingests blog/article/newsletter pages to clean Markdown for LLM consumption.
 Medium articles are fetched via Freedium mirror using a dual-source
 approach: the download endpoint for finished markdown + the `__data.json` endpoint for
 metadata (author, reading_time, cover image). Output includes YAML frontmatter with rich metadata.
@@ -48,7 +66,7 @@ article source — no paywalls, no UI noise, no ads, just content.
 
 ### Multi-entry-point design
 
-The conversion logic lives in service classes (`MediumService`, `DevtoService`,
+The ingestion logic lives in service classes (`MediumService`, `DevtoService`,
 `SubstackService`, `FreediumService`, `CacheService`) decorated with `@Injectable()`.
 The decorator is just DI metadata — it does NOT prevent direct instantiation.
 All services work with `new` outside NestJS:
@@ -64,7 +82,7 @@ This enables three entry points sharing the same logic, no duplication:
 |---|---|---|
 | HTTP API | `src/main.ts` | NestJS + Fastify, DI wires services, controller delegates to service |
 | CLI | `src/cli.ts` (planned) | `new` services directly, call `convert()`, print to stdout |
-| MCP server | `src/mcp.ts` (planned) | `new` services directly, expose `convert_article` tool |
+| MCP server | `src/mcp.ts` (planned) | `new` services directly, expose `ingest_article` tool |
 
 No refactor needed — the classes already work standalone. CLI and MCP are thin shells
 that instantiate the same services and call the same `convert()` method.
@@ -92,6 +110,29 @@ modules/substack/     → Substack feature: controller, service, DTOs, errors
 Provider-specific logic (metadata extraction, image replacement, URL validation) lives in
 `modules/<name>/`. If you're tempted to add a Medium-specific concern in `common/`, stop.
 
+### Shared code (`shared/providers.ts`)
+
+Single source of truth for values used by both backend and frontend:
+
+| Export | Purpose |
+|---|---|
+| `MEDIUM_DOMAINS` | 42 Medium domains (from Freedium's known list) |
+| `PROVIDERS` | Provider metadata: id, label, endpoint, source, url, icon, example |
+| `detectProvider(url)` | URL → provider id mapping. Used by frontend (auto-detect) + all 3 backend DTOs (`isValid*Url` delegate here) |
+| `ProviderId` | Type: `"medium" \| "devto" \| "substack"` |
+| `BASE_URL`, `GITHUB_URL`, etc. | Site constants |
+| `ERROR_CODES` | Error code reference (used by docs page) |
+| `FRONTMATTER_FIELDS` | Frontmatter field reference (used by docs page) |
+
+**Why centralized:** `detectProvider` was previously duplicated in 4 places (frontend
+`Ingestor.tsx` + 3 backend DTOs). All had the same `pathParts` / hostname logic. Now
+the DTOs are thin wrappers: `isValidDevtoUrl = (url) => detectProvider(url) === "devto"`.
+
+### Root route (`GET /`)
+
+Returns API metadata as JSON: `{ name, version, endpoints, source }`. Implemented in
+`AppController` (`src/app.controller.ts`). Endpoints object lists all provider routes.
+
 ### Data flow (dual-source)
 
 ```
@@ -112,6 +153,21 @@ GET /v1/medium?url=...
     → CacheService.set(url, markdown)
   → Response: text/markdown or application/json
   → On error: AllExceptionsFilter shapes to { code, message, details?, traceId }
+```
+
+### Substack home URL resolution
+
+Substack reader URLs (`https://substack.com/home/post/p-{id}`) redirect (302) to the
+real article URL (`https://{pub}.substack.com/p/{slug}`). The service resolves this
+redirect before fetching the API:
+
+```
+GET /v1/substack?url=https://substack.com/home/post/p-212696442
+  → isValidSubstackUrl (accepts /home/post/p-{id} pattern via detectProvider)
+  → isSubstackHomeUrl → true
+  → resolveHomeUrl: fetch with redirect: "manual", extract Location header
+  → resolvedUrl = https://{pub}.substack.com/p/{slug}
+  → fetchPost(resolvedUrl) → normal flow
 ```
 
 ### Why dual-source
@@ -139,7 +195,7 @@ URL validation accepts 42 domains sourced from Freedium's `KNOWN_MEDIUM_DOMAINS`
 `KNOWN_MEDIUM_CUSTOM_DOMAINS` (medium-parser/medium_parser/utils.py). Includes
 `medium.com`, `*.medium.com`, and publication custom domains like `itnext.io`,
 `levelup.gitconnected.com`, `betterprogramming.pub`, `towardsdatascience.com`, etc.
-Full list in `modules/medium/medium.dto.ts`.
+Full list in `shared/providers.ts` (`MEDIUM_DOMAINS`).
 
 ### Provider interface
 
@@ -162,7 +218,7 @@ All errors follow the standard shape: `{ code, message, details?, traceId }`
 
 | Code | HTTP | When |
 |---|---|---|
-| `VALIDATION.FAILED` | 422 | Bad query params (Zod pipe) |
+| `VALIDATION.FAILED` | 422 | Bad query params (Zod pipe). `details[]` contains Zod issue messages. |
 | `MEDIUM.INVALID_URL` | 400 | URL is not a Medium article (service-level check) |
 | `MEDIUM.FREEDIUM_UNAVAILABLE` | 503 | Freedium mirror down or timed out |
 | `MEDIUM.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
@@ -170,7 +226,7 @@ All errors follow the standard shape: `{ code, message, details?, traceId }`
 | `DEVTO.UNAVAILABLE` | 503 | Dev.to API down or timed out |
 | `DEVTO.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
 | `SUBSTACK.INVALID_URL` | 400 | URL is not a Substack article |
-| `SUBSTACK.PAID_POST` | 403 | Post is behind a paywall (only free posts convertible) |
+| `SUBSTACK.PAID_POST` | 403 | Post is behind a paywall (only free posts ingested) |
 | `SUBSTACK.UNAVAILABLE` | 503 | Substack API down or timed out |
 | `SUBSTACK.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
 | `INTERNAL.ERROR` | 500 | Unexpected error |
@@ -180,23 +236,154 @@ Typed domain errors in `modules/<provider>/errors/` extend semantic Nest excepti
 (`BadRequestException`, `ForbiddenException`, `ServiceUnavailableException`, `BadGatewayException`).
 The global `AllExceptionsFilter` in `common/filters/` shapes every error to the standard contract.
 
+**Frontend error handling:** The Ingestor component maps error codes to human-readable
+messages via `ERROR_MESSAGES`. For `VALIDATION.FAILED`, the first Zod detail message is
+appended (e.g. "That URL doesn't match the expected format. Must be a Substack article URL").
+
 ### API versioning
 
 URI versioning: `/v1/medium?url=...`. Bump to `/v2/` on breaking changes.
 Configured in `main.ts` via `app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })`.
 
+## Frontend (`web/`)
+
+Astro static site with React islands. Served by the NestJS backend as static files.
+
+### Structure
+
+```
+web/
+  public/
+    favicon.svg          SVG favicon — accent-colored rounded square with white "m"
+    og.svg               Open Graph image
+    icons/               Provider SVG logos (medium, devto, substack, bun, cloudflare, nestjs)
+  src/
+    components/
+      CodeBlock.astro    Terminal-style code block with copy button (currently unused)
+    islands/
+      Ingestor.tsx       React island — URL input, provider selector, output display
+    layouts/
+      Base.astro         Shared layout — header (sticky, backdrop-blur), footer, meta tags
+    pages/
+      index.astro        Landing page — hero, the problem, supported sources, source code, API examples
+      ingest.astro       Ingest page — Ingestor island + supported sources + output formats
+      docs.astro         API documentation — endpoints, error codes, frontmatter fields
+    styles/
+      global.css         Design tokens, base styles, shared components (.btn, .provider-icon, .terminal)
+```
+
+### Astro config (`astro.config.mjs`)
+
+| Setting | Value | Purpose |
+|---|---|---|
+| `output` | `'static'` | Static site generation (no SSR) |
+| `integrations` | `[react()]` | React island support via `@astrojs/react` |
+| `build.format` | `'directory'` | Directory-based output (`/ingest/index.html`) |
+| `build.inlineStylesheets` | `'always'` | Inline all CSS — no external stylesheet requests |
+| `devToolbar` | `{ enabled: false }` | Disable Astro dev toolbar in dev mode |
+| `vite.resolve.alias['@shared']` | `../shared/` | Alias for importing `shared/providers.ts` in islands/pages |
+
+### Design system
+
+| Token | Value | Purpose |
+|---|---|---|
+| `--accent` | `oklch(63% 0.20 250)` | Primary accent (WCAG AA compliant, 4.5:1 on dark bg) |
+| `--accent-hover` | `oklch(68% 0.20 250)` | Lighter on hover (not darker — dark bg) |
+| `--accent-subtle` | `oklch(63% 0.20 250 / 8%)` | Subtle accent background (8% opacity) |
+| `--bg` | `oklch(15% 0.02 260)` | Page background |
+| `--bg-surface` | `oklch(19% 0.02 260)` | Card/terminal background |
+| `--bg-elevated` | `oklch(23% 0.02 260)` | Button background |
+| `--ink` | `oklch(95% 0.01 260)` | Primary text |
+| `--ink-muted` | `oklch(65% 0.02 260)` | Secondary text (WCAG AA compliant) |
+| `--ink-dim` | `oklch(50% 0.02 260)` | Tertiary text (3.3:1 — below AA, use only for non-essential UI like line numbers) |
+| `--border` | `oklch(28% 0.02 260)` | Default border |
+| `--border-bright` | `oklch(35% 0.02 260)` | Hover border |
+| `--font-display` | Geist Variable | Display/headings |
+| `--font-body` | Geist Variable | Body text |
+| `--font-mono` | Geist Mono Variable | Monospace (buttons, code, labels) |
+
+**Spacing scale:** `--space-1` (4px), `--space-2` (8px), `--space-3` (12px), `--space-4` (16px),
+`--space-6` (24px), `--space-8` (32px), `--space-12` (48px), `--space-16` (64px), `--space-24` (96px),
+`--space-32` (128px). Note: `--space-10` and `--space-14` are NOT defined — use `--space-8` or
+`--space-12` instead.
+
+### Provider icons
+
+Provider logos use CSS mask technique (not `<img>` tags) so they inherit text color:
+
+```css
+.provider-icon {
+  background: currentColor;
+  mask-image: var(--icon-url);
+  mask-size: contain;
+  /* ... */
+}
+```
+
+Usage: `<span class="provider-icon" style="--icon-url: url(/icons/medium.svg)"></span>`
+
+**Why mask, not `<img>`:** `<img>` can't inherit CSS `color` — SVGs with `fill="currentColor"`
+resolve to black/default, invisible on dark backgrounds. The mask technique uses the SVG
+shape as a mask and fills with `currentColor`, so icons match text color in any state
+(active/inactive/hover).
+
+All provider SVGs in `web/public/icons/` use `fill="currentColor"` internally.
+
+### Ingestor component (`Ingestor.tsx`)
+
+React island with:
+- URL input with auto-detect (calls `detectProvider` from `shared/providers.ts`)
+- Segmented control for manual provider override (3 segments in one bordered container)
+- Terminal-style output with md/json tabs, line numbers, copy/download actions
+- Error display with human-readable messages mapped from API error codes
+
+### UI verification (`impeccable`)
+
+The `verify` script runs `npx impeccable detect web/dist/` to scan the built frontend
+for UI anti-patterns:
+
+| Anti-pattern | What it checks |
+|---|---|
+| Low contrast | WCAG AA (4.5:1 for body text, 3:1 for large text) |
+| Tight leading | `line-height` below 1.5 on text elements |
+
+**Current state:** 0 anti-patterns. Previous fixes:
+- `--accent` raised from `oklch(55% 0.20 250)` to `oklch(63% 0.20 250)` for AA compliance
+- `--accent-hover` changed from darker (58%) to lighter (68%) — dark bg means hover should brighten
+- Explicit `line-height: 1.5` added to `.lead`, `.btn`, and form element resets
+
 ## Dependencies and why each
+
+### Backend (`package.json`)
 
 | Dep | What it solves | Why not alternatives |
 |---|---|---|
 | `@nestjs/common` + `@nestjs/core` | Framework: modules, DI, controllers, validation | Hono is lighter but loses NestJS module/DI structure. Luis's stack prefers NestJS. |
 | `@nestjs/platform-fastify` + `fastify` | HTTP server adapter | Faster than express, lower overhead. NestJS supports it officially. |
+| `@fastify/static` | Serves Astro build output (`web/dist/`) from NestJS | Registered in `main.ts` after NestFactory.create(). Fastify's find-my-way router prioritizes static routes over `/*` wildcard, so API routes (`/v1/medium`, etc.) are unaffected. 10.1.3. |
 | `lru-cache` | In-memory LRU cache for fetched articles | Custom Map-based cache lacks TTL. lru-cache is the standard, 11.5.2, actively maintained. |
 | `zod` | Runtime validation of request params and response shape | Hand-written validation drifts. Zod schemas infer TS types. 3.25.76. |
 | `@cloudflare/containers` | Container class for Cloudflare Containers deployment | Worker routes requests to the NestJS+Bun Docker container. 0.3.7. |
 | `@cloudflare/workers-types` (dev) | TypeScript types for Cloudflare Workers APIs (`DurableObjectNamespace`, `ExportedHandler`) | Required for `src/worker.ts` typechecking. |
-| `turndown` | HTML→Markdown for Substack provider (body_html → markdown) | Substack API returns HTML only. turndown's `addRule()` API enables per-component custom rules for Substack's 8+ custom HTML components (footnotes, LaTeX, embeds, mentions). Alternatives: `html-to-md` (no custom rule API, only skip tags), `node-html-markdown` (limited `customTranslators`). turndown has `turndown-plugin-gfm` (already installed) for GFM tables/strikethrough. 7.2.4, 1 dep (`@mixmark-io/domino`). |
+| `turndown` | HTML→Markdown for Substack provider (body_html → markdown) | Substack API returns HTML only. turndown's `addRule()` API enables per-component custom rules for Substack's 8+ custom HTML components (footnotes, LaTeX, embeds, mentions). Alternatives: `html-to-md` (no custom rule API, only skip tags), `node-html-markdown` (limited `customTranslators`). 7.2.4, 1 dep (`@mixmark-io/domino`). |
 | `@types/turndown` (dev) | TypeScript types for turndown | Required for typechecking. 5.0.6. |
+| `vitest` (dev) | Test runner | Used by `bun run test`. Fast, Vite-based, supports Bun runtime. 3.2.7. |
+| `@types/bun` (dev) | TypeScript types for Bun runtime APIs | Required for `tsconfig.json` types. 1.4.0. |
+| `oxlint` (dev) | Linter | Fast Rust-based linter. Config in `.oxlintrc.json`. 1.80.0. |
+| `impeccable` (dev) | UI anti-pattern scanner | Scans built frontend for WCAG AA contrast + line-height issues. Used in `verify` script. 3.6.0. |
+
+### Frontend (`web/package.json`)
+
+| Dep | What it solves | Why not alternatives |
+|---|---|---|
+| `astro` | Static site generator with React island support | Next.js is heavier. Astro gives zero-JS by default with selective hydration. 7.2.9. |
+| `@astrojs/react` | React integration for Astro islands | Required for `Ingestor.tsx` (client:load). 6.0.4. |
+| `react` + `react-dom` | UI library for interactive islands | Needed for the Ingestor component (state, effects, animations). 19.2.8. |
+| `motion` | Animation library (framer-motion successor) | Used for enter/exit animations on results and errors. 13.1.1. |
+| `lucide-react` | Icon library (React) | Used in Ingestor for Copy, Download, AlertCircle, etc. 1.33.0. |
+| `@lucide/astro` | Icon library (Astro) | Used in static pages for ChevronRight, ArrowRight, GitHub icon. 1.33.0. |
+| `@fontsource-variable/geist` + `geist-mono` | Font loading | Geist (body) + Geist Mono (code/buttons/labels). Self-hosted, no Google Fonts. |
+| `@types/react` + `@types/react-dom` (dev) | TypeScript types for React | Required for typechecking the Ingestor island. 19.2.18 / 19.2.5. |
 
 **What we deliberately did NOT add:**
 
@@ -208,11 +395,12 @@ Configured in `main.ts` via `app.enableVersioning({ type: VersioningType.URI, de
 | `redis` | In-memory LRU is sufficient for a personal API. No external service to manage. |
 | `html-to-md` | No custom rule API — only supports `renderCustomTags: 'SKIP'`. Can't transform Substack's custom components (footnotes→`[^N]`, LaTeX→`$$...$$`, etc.). |
 | `node-html-markdown` | `customTranslators` is less flexible than turndown's `addRule(filter, replacement)`. Larger dependency tree (`node-html-parser`). |
+| `tailwindcss` | Project uses CSS custom properties (design tokens in `global.css`). Tailwind would add build complexity for a 3-page site. |
 
 ## Engineering discipline
 
 ### Verify before you assert (G2, G12)
-Never say "working" or "done" without running `bun run verify` (typecheck + lint) AND
+Never say "working" or "done" without running `bun run verify` (typecheck + lint + impeccable) AND
 the actual command/flow. Show the output.
 
 ### curl first, code second (G13)
@@ -256,13 +444,21 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 | `FETCH_TIMEOUT_MS` | `20000` (20s) | Freedium fetch timeout |
 | `USER_AGENT` | Chrome 120 UA | User-Agent for Freedium requests |
 
+## Linting
+
+`.oxlintrc.json` configures oxlint with:
+- `correctness` category: error
+- `suspicious` + `perf` categories: warn
+- `no-default-export`: error (enforces named exports)
+- `ignorePatterns`: `["web/.astro/**"]` (Astro-generated files trigger triple-slash-reference errors)
+
 ## Attribution
 
 | Provider | Source | Notes |
 |---|---|---|
 | Medium | [Freedium](https://codeberg.org/Freedium-cfd/web) | Open-source Medium article fetcher. Two endpoints: `/api/download` (markdown) + `__data.json` (metadata). |
 | Dev.to | [Forem API](https://developers.forem.com/api) | Public, unauthenticated. `GET /api/articles/{username}/{slug}` returns native markdown + metadata. |
-| Substack | Substack public API | `GET https://{domain}/api/v1/posts/{slug}`. Free posts only — paid posts are server-side truncated. |
+| Substack | Substack public API | `GET https://{domain}/api/v1/posts/{slug}`. Free posts only — paid posts are server-side truncated. Home URLs (`/home/post/p-{id}`) resolved via 302 redirect. |
 
 ## Deployment
 
@@ -270,11 +466,33 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 |---|---|---|
 | HTTP API (`src/main.ts`) | Deployed | Cloudflare Containers — `https://mdingest.knightker.workers.dev` |
 | CLI (`src/cli.ts`) | Planned | `bun run src/cli.ts <url>` → markdown to stdout |
-| MCP server (`src/mcp.ts`) | Planned | Expose `convert_article` tool for AI agents |
+| MCP server (`src/mcp.ts`) | Planned | Expose `ingest_article` tool for AI agents |
 
 HTTP API runs on Cloudflare Containers. A Worker (`src/worker.ts`) routes all requests
 to a NestJS + Bun Docker container. The Worker extends the `Container` class from
 `@cloudflare/containers` with `defaultPort = 3000` (matching the Dockerfile's EXPOSE).
+
+The Dockerfile is multi-stage:
+
+| Stage | Base image | What it does |
+|---|---|---|
+| 1 (frontend) | `oven/bun:1.3` | Installs `web/` deps, copies `shared/` + `web/`, runs `bun run build` → `web/dist/` |
+| 2 (base) | `oven/bun:1.3` | Installs backend deps (production), copies `src/` + `shared/` + `web/dist/`, runs `bun run src/main.ts` |
+
+The NestJS app serves the Astro static files from `web/dist/` via `@fastify/static`
+(registered in `main.ts` after `NestFactory.create()`).
+
+`wrangler.toml` config:
+
+| Setting | Value | Purpose |
+|---|---|---|
+| `observability.enabled` | `true` | Worker observability (logs, metrics) |
+| `containers.max_instances` | `1` | Single container instance |
+| `containers.instance_type` | `"basic"` | Basic instance type |
+| `containers.rollout_step_percentage` | `100` | 100% rollout in one step |
+| `containers.rollout_active_grace_period` | `0` | All instances eligible for update immediately |
+| `durable_objects.bindings` | `MDINGEST_CONTAINER` | DO binding for the container class |
+| `migrations.new_sqlite_classes` | `["MdingestContainer"]` | SQLite-backed DO |
 
 Deploy: `bun x wrangler deploy` — builds the Docker image, pushes to Cloudflare registry,
 and deploys the Worker. Instant rollout is configured via two mechanisms:

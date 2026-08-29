@@ -258,7 +258,8 @@ Categories:
 2. Publication custom domains — `itnext.io`, `towardsdatascience.com`,
    `betterprogramming.pub`, `levelup.gitconnected.com`, etc.
 
-Full list in `src/modules/medium/medium.dto.ts` (`MEDIUM_DOMAINS` set).
+Full list in `shared/providers.ts` (`MEDIUM_DOMAINS` set). URL validation is centralized
+in `detectProvider()` — `medium.dto.ts` delegates to it via `isValidMediumUrl`.
 
 ## Error handling
 
@@ -331,5 +332,5 @@ Full coverage matrix: [`docs/markdown-coverage-matrix.md`](markdown-coverage-mat
 - Freedium renderer: `freedium-library/src/freedium_library/services/medium/renderer.py`
 - Our service: `src/modules/medium/medium.service.ts`
 - Our Freedium client: `src/integrations/freedium/freedium.service.ts`
-- URL validation: `src/modules/medium/medium.dto.ts`
+- URL validation: `shared/providers.ts` (`detectProvider`) → `src/modules/medium/medium.dto.ts` (`isValidMediumUrl` delegates)
 - Metadata schema: `src/common/types/metadata.types.ts`
