@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#1a1a2e" />
+  <rect x="0" y="0" width="1200" height="630" fill="oklch(15% 0.02 260)" />
+
+  <!-- Logo -->
+  <rect x="80" y="80" width="48" height="48" rx="8" fill="oklch(63% 0.20 250)" />
+  <text x="104" y="113" font-family="monospace" font-size="28" font-weight="700" fill="oklch(98% 0.01 260)" text-anchor="middle">m</text>
+
+  <!-- Wordmark -->
+  <text x="144" y="113" font-family="monospace" font-size="24" font-weight="600" fill="oklch(95% 0.01 260)">mdingest</text>
+
+  <!-- Headline -->
+  <text x="80" y="240" font-family="system-ui, sans-serif" font-size="64" font-weight="700" fill="oklch(95% 0.01 260)" letter-spacing="-2">
+    Articles to clean Markdown.
+  </text>
+  <text x="80" y="310" font-family="system-ui, sans-serif" font-size="64" font-weight="400" fill="oklch(50% 0.02 260)" letter-spacing="-2">
+    For LLMs, RAG, or reading.
+  </text>
+
+  <!-- Subtitle -->
+  <text x="80" y="380" font-family="system-ui, sans-serif" font-size="24" fill="oklch(65% 0.02 260)">
+    Medium / Dev.to / Substack → clean Markdown with YAML frontmatter
+  </text>
+
+  <!-- Terminal mockup -->
+  <rect x="80" y="430" width="700" height="140" rx="8" fill="oklch(19% 0.02 260)" stroke="oklch(28% 0.02 260)" stroke-width="1" />
+  <text x="100" y="470" font-family="monospace" font-size="16" fill="oklch(63% 0.20 250)">$</text>
+  <text x="120" y="470" font-family="monospace" font-size="16" fill="oklch(70% 0.12 160)">curl "mdingest/v1/medium?url=..."</text>
+  <text x="100" y="510" font-family="monospace" font-size="14" fill="oklch(50% 0.02 260)">---
+title: How to Build APIs
+author: Jane Doe
+---</text>
+
+  <!-- Tech badges -->
+  <text x="900" y="540" font-family="monospace" font-size="16" fill="oklch(50% 0.02 260)">Bun / NestJS / Cloudflare</text>
+</svg>

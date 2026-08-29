@@ -1,0 +1,281 @@
+---
+import Base from '../layouts/Base.astro';
+import ArrowRight from '@lucide/astro/icons/arrow-right';
+import ChevronRight from '@lucide/astro/icons/chevron-right';
+import { PROVIDERS, BASE_URL, GITHUB_URL } from '@shared/providers.ts';
+---
+<Base title="mdingest — Ingest articles to clean Markdown">
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <p class="eyebrow">article → markdown api</p>
+      <h1>Articles to clean Markdown.<br /><span class="muted">For LLMs, RAG, or reading.</span></h1>
+      <p class="lead">
+        Paste a URL from Medium, Dev.to, or Substack. Get clean Markdown with
+        YAML frontmatter — title, author, dates, tags, cover image.
+      </p>
+      <div class="hero-cta-row">
+        <a href="/ingest" class="btn btn-primary">
+          <span>Ingest an article</span>
+          <ArrowRight size={14} />
+        </a>
+        <a href={GITHUB_URL} rel="noopener" class="btn btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+          </svg>
+          <span>View source</span>
+        </a>
+      </div>
+
+      <!-- Terminal showing real curl → response -->
+      <div class="terminal hero-terminal" data-copy-content={`curl "${BASE_URL}/v1/medium?url=https://medium.com/@user/article"`}>
+        <div class="terminal-header">
+          <span class="terminal-dots">
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+          </span>
+          <span class="terminal-title">curl</span>
+          <button class="terminal-copy" type="button">Copy</button>
+        </div>
+        <div class="terminal-body">
+<pre><span class="terminal-prompt">$</span> curl <span class="terminal-string">"{BASE_URL}/v1/medium?url=https://medium.com/@user/article"</span>
+
+<span class="terminal-comment">---
+title: How to Build APIs
+author: Jane Doe
+published: 2024-03-15
+reading_time: 8 min
+tags: [api, backend]
+---</span>
+
+<span class="terminal-output"># How to Build APIs
+
+Full article body in clean Markdown...</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The problem -->
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">the problem</p>
+      <h2>Web pages are noisy. LLMs need clean text.</h2>
+      <dl class="why-list">
+        <dt>No paywalls</dt>
+        <dd>Medium articles via Freedium mirror. Full content, not truncated previews.</dd>
+        <dt>No UI noise</dt>
+        <dd>Strips ads, nav, sidebars, popups, cookie banners. Just the article body.</dd>
+        <dt>Structured metadata</dt>
+        <dd>YAML frontmatter with title, author, dates, reading time, tags, cover image.</dd>
+        <dt>RAG-ready</dt>
+        <dd>Clean Markdown — drop it into your vector DB, LLM context, or CI.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Supported sources -->
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">supported sources</p>
+      <h2>Three sources, one API</h2>
+      <div class="source-list">
+        {PROVIDERS.map((p) => (
+          <a href={p.url} rel="noopener" class="source-row">
+            <span class="source-icon provider-icon" style={`--icon-url: url(${p.icon})`}></span>
+            <span class="source-name">{p.label}</span>
+            <code class="source-endpoint">{p.endpoint}</code>
+            <span class="source-desc">{p.source}</span>
+            <ChevronRight size={14} class="source-arrow" />
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Source code -->
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">source code</p>
+      <h2>MIT licensed. Self-hostable.</h2>
+      <p class="lead">
+        The entire codebase is on GitHub. Deploy it on Cloudflare, run it locally,
+        or just read how it works.
+      </p>
+      <p class="section-link">
+        <a href={GITHUB_URL} rel="noopener">github.com/LOsioChico/mdingest →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- API access -->
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">api</p>
+      <h2>It's an API too</h2>
+      <p class="lead">
+        Same endpoints power the web ingestor. Use it from your code,
+        your RAG pipeline, your CI.
+      </p>
+      <div class="terminal" data-copy-content={`fetch("${BASE_URL}/v1/devto?url=https://dev.to/user/post")`}>
+        <div class="terminal-header">
+          <span class="terminal-dots">
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+          </span>
+          <span class="terminal-title">javascript</span>
+          <button class="terminal-copy" type="button">Copy</button>
+        </div>
+        <div class="terminal-body">
+<pre><span class="terminal-keyword">const</span> res = <span class="terminal-keyword">await</span> fetch(
+  <span class="terminal-string">"{BASE_URL}/v1/devto?url=https://dev.to/user/post"</span>
+);
+<span class="terminal-keyword">const</span> {'{'} metadata, markdown {'}'} = <span class="terminal-keyword">await</span> res.json();
+
+metadata.title  <span class="terminal-comment">// "Building CLI Tools with Bun"</span>
+markdown.length <span class="terminal-comment">// 8421</span></pre>
+        </div>
+      </div>
+      <p class="section-link">
+        <a href="/docs">Read the API docs →</a>
+      </p>
+    </div>
+  </section>
+</Base>
+
+<script>
+  // Copy button on terminal blocks
+  document.querySelectorAll('.terminal[data-copy-content]').forEach((el) => {
+    const btn = el.querySelector('.terminal-copy');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const content = el.getAttribute('data-copy-content') ?? '';
+      navigator.clipboard.writeText(content);
+      const original = btn.textContent;
+      btn.textContent = 'copied';
+      setTimeout(() => { btn.textContent = original; }, 1200);
+    });
+  });
+</script>
+
+<style>
+  .hero {
+    padding: var(--space-24) 0 var(--space-16);
+  }
+  .hero h1 {
+    margin-bottom: var(--space-4);
+    max-width: 18ch;
+  }
+  .hero h1 .muted {
+    color: var(--ink-dim);
+    font-weight: 400;
+  }
+  .lead {
+    font-size: var(--text-lg);
+    line-height: 1.5;
+    color: var(--ink-muted);
+    margin-bottom: var(--space-8);
+    max-width: 52ch;
+  }
+  .hero-cta-row {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-8);
+    flex-wrap: wrap;
+  }
+  .hero-terminal {
+    max-width: 100%;
+  }
+  .hero-terminal .terminal-body pre {
+    font-size: var(--text-sm);
+    line-height: 1.7;
+  }
+
+  .why-list {
+    margin-top: var(--space-6);
+    max-width: var(--max-prose);
+  }
+  .why-list dt {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: var(--space-4);
+  }
+  .why-list dt:first-child { margin-top: 0; }
+  .why-list dd {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    line-height: 1.5;
+    margin-top: var(--space-1);
+    margin-left: 0;
+  }
+
+  .source-list {
+    margin-top: var(--space-6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .source-row {
+    display: grid;
+    grid-template-columns: 20px 80px 140px 1fr 20px;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border);
+    font-size: var(--text-sm);
+    color: var(--ink);
+    transition: background var(--duration-fast) var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .source-row:hover { background: var(--bg-surface); }
+  }
+  .source-row:last-child { border-bottom: none; }
+  .source-arrow {
+    color: var(--ink-dim);
+    justify-self: end;
+  }
+  .source-name {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .source-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+  }
+  .source-endpoint {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-size: var(--text-xs);
+  }
+  .source-desc {
+    color: var(--ink-muted);
+  }
+
+  .section-link {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+  }
+  .section-link a {
+    color: var(--accent);
+  }
+
+  @media (max-width: 768px) {
+    .hero { padding: var(--space-16) 0 var(--space-12); }
+    .source-row {
+      grid-template-columns: 20px 1fr 20px;
+      gap: var(--space-1);
+      padding: var(--space-4);
+    }
+    .source-icon { grid-column: 1; grid-row: 1; align-self: center; }
+    .source-name { grid-column: 2; }
+    .source-endpoint { grid-column: 2; font-size: var(--text-sm); }
+    .source-desc { grid-column: 2; }
+    .source-arrow { grid-column: 3; grid-row: 1 / span 4; align-self: center; }
+  }
+</style>

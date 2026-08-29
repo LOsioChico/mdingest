@@ -1,0 +1,178 @@
+---
+import Base from '../layouts/Base.astro';
+import { BASE_URL, PROVIDERS, ERROR_CODES, FRONTMATTER_FIELDS } from '@shared/providers.ts';
+---
+<Base title="API Docs — mdingest" description="mdingest API reference: endpoints, parameters, response formats, and error codes">
+  <section class="section container docs">
+    <p class="eyebrow">reference</p>
+    <h1>API Docs</h1>
+
+    <h2>Base URL</h2>
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="terminal-dots">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+        </span>
+        <span class="terminal-title">base</span>
+      </div>
+      <div class="terminal-body">
+        <pre>{BASE_URL}</pre>
+      </div>
+    </div>
+
+    <h2>Endpoints</h2>
+    {PROVIDERS.map((p) => (
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="endpoint-method">GET</span>
+          <code class="endpoint-path">{p.path}</code>
+        </div>
+        <table class="table">
+          <thead>
+            <tr><th>Param</th><th>Required</th><th>Type</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>url</code></td><td>yes</td><td>string</td><td>Article URL to ingest</td></tr>
+            <tr><td><code>format</code></td><td>no</td><td><code>markdown</code> | <code>json</code></td><td>Response format (default: markdown)</td></tr>
+          </tbody>
+        </table>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dots">
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+            </span>
+            <span class="terminal-title">curl</span>
+          </div>
+          <div class="terminal-body">
+            <pre><span class="terminal-prompt">$</span> curl <span class="terminal-string">"{BASE_URL}{p.endpoint}?url=https://example.com/article"</span></pre>
+          </div>
+        </div>
+      </div>
+    ))}
+
+    <h2>Response</h2>
+    <p>When <code>format=markdown</code> (default), returns <code>text/markdown</code> with YAML frontmatter:</p>
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="terminal-dots">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+        </span>
+        <span class="terminal-title">markdown</span>
+      </div>
+      <div class="terminal-body">
+        <pre><span class="terminal-comment">---
+title: Article Title
+author: Jane Doe
+published: 2024-03-15
+reading_time: 8 min
+tags: [api, backend]
+cover_image: https://...
+---</span>
+
+<span class="terminal-output"># Article Title
+
+Article body in clean Markdown...</span></pre>
+      </div>
+    </div>
+    <p>When <code>format=json</code>, returns <code>application/json</code> with <code>{`{ metadata, markdown }`}</code>.</p>
+
+    <h3>Frontmatter fields</h3>
+    <table class="table">
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        {FRONTMATTER_FIELDS.map((f) => (
+          <tr><td><code>{f.field}</code></td><td><span class="badge">{f.type}</span></td><td>{f.desc}</td></tr>
+        ))}
+      </tbody>
+    </table>
+
+    <h2>Errors</h2>
+    <p>All errors return <code>{`{ code, message, details?, traceId }`}</code>:</p>
+    <table class="table">
+      <thead>
+        <tr><th>Code</th><th>HTTP</th><th>When</th></tr>
+      </thead>
+      <tbody>
+        {ERROR_CODES.map((e) => (
+          <tr>
+            <td><code>{e.code}</code></td>
+            <td><span class={`badge http-${e.http[0]}`}>{e.http}</span></td>
+            <td>{e.when}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+
+    <h2>Provider notes</h2>
+    <ul class="provider-notes">
+      <li><strong>Medium</strong> — Freedium mirror (dual-source: download for markdown, data endpoint for metadata). Full article access.</li>
+      <li><strong>Dev.to</strong> — Public Forem API. No restrictions. Returns native Markdown.</li>
+      <li><strong>Substack</strong> — Public Substack API. Posts not available for conversion return <code>SUBSTACK.PAID_POST</code> (403).</li>
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .docs { max-width: var(--max-content); }
+  .docs h1 { margin-bottom: var(--space-8); }
+  .docs h2 {
+    margin-top: var(--space-16);
+    margin-bottom: var(--space-4);
+  }
+  .docs h3 {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+  }
+  .docs p {
+    margin-bottom: var(--space-3);
+    max-width: var(--max-prose);
+  }
+  .docs .terminal {
+    margin: var(--space-3) 0;
+  }
+  .endpoint {
+    margin-bottom: var(--space-8);
+  }
+  .endpoint-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .endpoint-method {
+    padding: 2px var(--space-2);
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+  .endpoint-path {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--ink);
+  }
+  .http-4 { color: oklch(80% 0.12 80); border-color: oklch(70% 0.12 80 / 30%); }
+  .http-5 { color: oklch(75% 0.22 25); border-color: oklch(65% 0.22 25 / 30%); }
+  .provider-notes {
+    list-style: none;
+    padding: 0;
+    max-width: var(--max-prose);
+  }
+  .provider-notes li {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.6;
+    font-size: var(--text-sm);
+  }
+  .provider-notes li:last-child { border-bottom: none; }
+</style>

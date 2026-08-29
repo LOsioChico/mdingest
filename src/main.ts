@@ -5,6 +5,9 @@ import {
 } from "@nestjs/platform-fastify";
 import { VersioningType } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import fastifyStatic from "@fastify/static";
 import { AppModule } from "./app.module.ts";
 import { config } from "./core/config/config.ts";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.ts";
@@ -13,6 +16,7 @@ import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.ts";
  * Bootstrap: NestJS + Fastify on Bun runtime.
  * - URI versioning (/v1/...)
  * - Global exception filter for standard error contract
+ * - @fastify/static serves Astro build output (web/dist/) for the UI
  */
 
 async function bootstrap(): Promise<void> {
@@ -30,12 +34,26 @@ async function bootstrap(): Promise<void> {
   });
 
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // Register @fastify/static AFTER NestFactory.create() to serve Astro build output.
+  // Must be called before app.listen() so the /* wildcard route is registered.
+  // Fastify's find-my-way router prioritizes static routes (NestJS /v1/medium, etc.)
+  // over the /* wildcard, so API routes are not affected.
+  const webDist = join(process.cwd(), "web", "dist");
+  if (existsSync(webDist)) {
+    await app.register(fastifyStatic, {
+      root: webDist,
+      prefix: "/",
+    });
+  }
+
   app.enableShutdownHooks();
 
   await app.listen(config.port, "0.0.0.0");
 
   console.log(`\n  mdingest running on http://localhost:${config.port}`);
-  console.log(`  Try: curl "http://localhost:${config.port}/v1/medium?url=https://medium.com/@user/article"`);
+  console.log(`  UI:  http://localhost:${config.port}/`);
+  console.log(`  API: http://localhost:${config.port}/v1/medium?url=...`);
 }
 
 bootstrap();
