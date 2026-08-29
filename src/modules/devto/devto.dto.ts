@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { detectProvider } from "../../../shared/providers.ts";
 
 /**
  * Request/response DTOs for the Dev.to provider.
@@ -7,20 +8,10 @@ import { z } from "zod";
 
 /**
  * Validates that a URL is a Dev.to article URL.
- *
- * Dev.to URLs:
- *   - https://dev.to/{username}/{slug}
- *
- * The Forem API accepts GET /api/articles/{username}/{slug} and returns
- * the full article including body_markdown.
+ * Delegates to shared detectProvider — single source of truth for URL matching.
  */
 export function isValidDevtoUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname === "dev.to" && parsed.pathname.split("/").length >= 3;
-  } catch {
-    return false;
-  }
+  return detectProvider(url) === "devto";
 }
 
 export const DevtoConvertQuerySchema = z.object({

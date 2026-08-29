@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { detectProvider } from "../../../shared/providers.ts";
 
 /**
  * Request/response DTOs for the Substack provider.
@@ -7,20 +8,21 @@ import { z } from "zod";
 
 /**
  * Validates that a URL is a Substack article URL.
- *
- * Substack URLs:
- *   - https://{pub}.substack.com/p/{slug}
- *   - https://{custom-domain}/p/{slug}  (e.g. www.noahpinion.blog, www.argmin.net)
- *
- * The path must contain `/p/{slug}`. The domain can be anything —
- * if it's not a Substack publication, the API returns 404 and we
- * surface that as SUBSTACK.UNAVAILABLE.
+ * Delegates to shared detectProvider — single source of truth for URL matching.
  */
 export function isValidSubstackUrl(url: string): boolean {
+  return detectProvider(url) === "substack";
+}
+
+/**
+ * Checks if a URL is a Substack reader/home URL that needs redirect resolution.
+ * e.g. https://substack.com/home/post/p-212696442
+ */
+export function isSubstackHomeUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     const pathParts = parsed.pathname.split("/").filter(Boolean);
-    return pathParts.length >= 2 && pathParts[0] === "p";
+    return pathParts.length >= 3 && pathParts[0] === "home" && pathParts[1] === "post" && (pathParts[2]?.startsWith("p-") ?? false);
   } catch {
     return false;
   }
