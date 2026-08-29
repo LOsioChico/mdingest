@@ -25,9 +25,7 @@ curl "https://mdingest.knightker.workers.dev/v1/devto?url=https://dev.to/user/ar
 curl "https://mdingest.knightker.workers.dev/v1/substack?url=https://pub.substack.com/p/article-slug"
 ```
 
-Add `&format=json` for `{ metadata, markdown }` JSON response instead of raw markdown.
-
-Returns `text/markdown` with YAML frontmatter + clean body:
+Default response is `text/markdown` with YAML frontmatter + clean body:
 
 ```markdown
 ---
@@ -45,13 +43,13 @@ tags:
 # Article content in clean Markdown...
 ```
 
-### Get JSON response (metadata + markdown)
+### JSON response (metadata + markdown)
+
+Add `&format=json` to get `{ metadata, markdown }` as `application/json` instead of raw markdown:
 
 ```bash
 curl "https://mdingest.knightker.workers.dev/v1/medium?url=https://medium.com/@user/article-id&format=json"
 ```
-
-Returns `application/json`:
 
 ```json
 {
