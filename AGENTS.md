@@ -1,7 +1,8 @@
 # AGENTS.md — mdingest Operating Contract
 
 > API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
-> Currently supports Medium (via Freedium paywall bypass). Designed for future Substack, Dev.to, etc.
+> Currently supports Medium (via Freedium paywall bypass) and Dev.to (via Forem API).
+> Designed for future Substack and other providers.
 
 Operating contract for any AI agent (Devin, Claude Code, Cursor) working on this repo.
 Read this file before writing code.
@@ -76,13 +77,14 @@ common/types/         → Shared types: ArticleMetadata schema, Provider interfa
 common/pipes/         → ZodValidationPipe (validates controller input)
 common/filters/       → AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
 modules/medium/       → Medium feature: controller, service, DTOs, errors
+modules/devto/        → Dev.to feature: controller, service, DTOs, errors
 ```
 
 **The separation rule (NestJS 6-bucket layout):**
 - `core/` — app-wide infrastructure (config, cache). Could be `@Global()`.
 - `integrations/` — external service clients (Freedium). Thin wrappers, no business logic.
 - `common/` — generic, domain-less utilities (types, pipes, filters). No business logic.
-- `modules/` — business features (Medium). Owns its controllers, services, DTOs, errors.
+- `modules/` — business features (Medium, Dev.to). Owns its controllers, services, DTOs, errors.
 
 Provider-specific logic (metadata extraction, image replacement, URL validation) lives in
 `modules/<name>/`. If you're tempted to add a Medium-specific concern in `common/`, stop.
@@ -148,7 +150,7 @@ interface Provider {
 }
 ```
 
-Future providers (Substack, Dev.to) add a new folder under `modules/`, implement the
+Future providers (Substack) add a new folder under `modules/`, implement the
 interface, and register in `app.module.ts`. Common modules don't change.
 
 ### Error contract
@@ -161,9 +163,12 @@ All errors follow the standard shape: `{ code, message, details?, traceId }`
 | `MEDIUM.INVALID_URL` | 400 | URL is not a Medium article (service-level check) |
 | `MEDIUM.FREEDIUM_UNAVAILABLE` | 503 | Freedium mirror down or timed out |
 | `MEDIUM.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
+| `DEVTO.INVALID_URL` | 400 | URL is not a Dev.to article |
+| `DEVTO.UNAVAILABLE` | 503 | Dev.to API down or timed out |
+| `DEVTO.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
 | `INTERNAL.ERROR` | 500 | Unexpected error |
 
-Typed domain errors in `modules/medium/errors/` extend semantic Nest exceptions
+Typed domain errors in `modules/<provider>/errors/` extend semantic Nest exceptions
 (`BadRequestException`, `ServiceUnavailableException`, `BadGatewayException`).
 The global `AllExceptionsFilter` in `common/filters/` shapes every error to the standard contract.
 

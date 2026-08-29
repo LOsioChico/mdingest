@@ -7,8 +7,8 @@
 
 API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
 
-Currently supports **Medium** (via [Freedium](https://codeberg.org/Freedium-cfd/web) paywall bypass).
-Designed for future Substack, Dev.to, and other providers.
+Currently supports **Medium** (via [Freedium](https://codeberg.org/Freedium-cfd/web) paywall bypass) and **Dev.to** (via Forem API).
+Designed for future Substack and other providers.
 
 ## Quick start
 
@@ -25,6 +25,7 @@ Deployed at `https://mdingest.knightker.workers.dev`:
 
 ```bash
 curl "https://mdingest.knightker.workers.dev/v1/medium?url=https://medium.com/@user/article-id"
+curl "https://mdingest.knightker.workers.dev/v1/devto?url=https://dev.to/user/article-slug"
 ```
 
 ### Local development
@@ -32,6 +33,7 @@ curl "https://mdingest.knightker.workers.dev/v1/medium?url=https://medium.com/@u
 ```bash
 bun run dev
 curl "http://localhost:3000/v1/medium?url=https://medium.com/@user/article-id"
+curl "http://localhost:3000/v1/devto?url=https://dev.to/user/article-slug"
 ```
 
 Returns `text/markdown` with YAML frontmatter + clean body:
@@ -137,7 +139,7 @@ Cloudflare-blocked without auth).
 custom domains (`itnext.io`, `levelup.gitconnected.com`, `betterprogramming.pub`, etc.).
 
 **Provider pattern:** Each content source implements the `Provider` interface.
-Adding a new provider (Substack, Dev.to) only requires a new folder under `modules/`
+Adding a new provider (Substack) only requires a new folder under `modules/`
 — no changes to core or common modules.
 
 **Multi-entry-point:** Service classes use `@Injectable()` (NestJS DI metadata) but
@@ -171,9 +173,10 @@ We use two Freedium endpoints: `/api/download` (finished markdown) and `__data.j
 | Feature | Status | How |
 |---|---|---|
 | HTTP API | Deployed | `https://mdingest.knightker.workers.dev/v1/medium?url=...` — Cloudflare Containers |
+| Dev.to provider | Implemented | `GET /v1/devto?url=...` — Forem API, liquid tag transform, 38 unit tests |
 | CLI | Planned | `bun run src/cli.ts <url>` — direct `new` services, print markdown |
 | MCP server | Planned | Expose `convert_article` tool — same services, `@modelcontextprotocol/sdk` |
-| Additional providers | Researched | Substack, Dev.to — new folder under `modules/`. Research: [`docs/substack-extraction.md`](docs/substack-extraction.md), [`docs/devto-extraction.md`](docs/devto-extraction.md) |
+| Substack provider | Researched | HTML→Markdown needs `turndown` dep + custom component handlers. Research: [`docs/substack-extraction.md`](docs/substack-extraction.md) |
 
 ## Development
 
