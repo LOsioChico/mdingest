@@ -321,7 +321,7 @@ markdown directly. The only HTML we handle is `<picture>` image tags
 | LaTeX/math | Not in Medium | Yes (KaTeX liquid tag) | Yes (MathJax, custom HTML) |
 | Retries needed | Yes (5x for placeholders) | No | No |
 | Dual-source merge | Yes (download + data) | No (single endpoint) | No (single endpoint) |
-| Implementation status | **Deployed** | Not started | Not started |
+| Implementation status | **Deployed** | **Deployed** | **Deployed** |
 
 Full coverage matrix: [`docs/markdown-coverage-matrix.md`](markdown-coverage-matrix.md)
 

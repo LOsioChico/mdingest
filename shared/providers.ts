@@ -8,7 +8,7 @@
 // ── Medium domains ──────────────────────────────────────────────
 // Sourced from Freedium's KNOWN_MEDIUM_DOMAINS + KNOWN_MEDIUM_CUSTOM_DOMAINS
 // (medium-parser/medium_parser/utils.py + medium_domains.txt).
-// Duplicated in backend (medium.dto.ts) and frontend (Converter.tsx) — centralized here.
+// Duplicated in backend (medium.dto.ts) and frontend (Ingestor.tsx) — centralized here.
 
 export const MEDIUM_DOMAINS: ReadonlySet<string> = new Set([
   // KNOWN_MEDIUM_DOMAINS
@@ -58,7 +58,7 @@ export const MEDIUM_DOMAINS: ReadonlySet<string> = new Set([
 ]);
 
 // ── Provider metadata ───────────────────────────────────────────
-// Used by Converter.tsx (pills), ProviderCards.astro (cards), docs.astro (endpoints).
+// Used by Ingestor.tsx (pills), index.astro (source cards), docs.astro (endpoints).
 
 export interface ProviderInfo {
   readonly id: "medium" | "devto" | "substack";

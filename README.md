@@ -7,15 +7,18 @@
 
 API that ingests blog/article/newsletter pages to clean Markdown for LLM consumption.
 Supports **Medium** (via [Freedium](https://codeberg.org/Freedium-cfd/web)), **Dev.to** (Forem API), and **Substack** (free posts via public API + HTML→Markdown).
+Four entry points: **HTTP API**, **CLI**, **MCP server (stdio)**, and **MCP server (HTTP)** — all sharing the same ingestion logic.
 
 ## Quick start
 
 ```bash
 bun install
-bun run dev
+bun run dev          # HTTP API + web UI on port 3000
 ```
 
 ## Usage
+
+### HTTP API
 
 Deployed at `https://mdingest.knightker.workers.dev`:
 
@@ -83,6 +86,60 @@ curl "http://localhost:3000/v1/medium?url=https://medium.com/@user/article-id"
 The web UI is at `http://localhost:3000/` — paste a URL, auto-detects the provider,
 and shows the output with md/json tabs and line numbers.
 
+### CLI
+
+```bash
+# Ingest any article URL → markdown to stdout (auto-detects provider)
+bun run src/cli.ts https://dev.to/user/post > article.md
+
+# JSON output (metadata + markdown)
+bun run src/cli.ts https://dev.to/user/post --json
+
+# Override provider auto-detection
+bun run src/cli.ts https://example.com/post --provider medium
+
+# List supported providers
+bun run src/cli.ts providers
+```
+
+Pipe-friendly: `mdingest https://dev.to/user/post > article.md` gives you clean Markdown with no log noise.
+
+### MCP server
+
+For AI tools (Claude, Cursor, etc.) — two ways to connect:
+
+**Remote (zero setup):** Register the deployed endpoint directly:
+
+```json
+{
+  "mcpServers": {
+    "mdingest": {
+      "url": "https://mdingest.knightker.workers.dev/v1/mcp"
+    }
+  }
+}
+```
+
+**Local (stdio):** Run the CLI as a local process:
+
+```json
+{
+  "mcpServers": {
+    "mdingest": {
+      "command": "bun",
+      "args": ["run", "src/cli.ts", "mcp"]
+    }
+  }
+}
+```
+
+Both expose the same two tools:
+
+| Tool | Description |
+|---|---|
+| `ingest_article` | Ingest a URL into clean Markdown. Auto-detects provider. Returns markdown text by default; `json: true` for `{metadata, markdown}`. |
+| `list_providers` | List supported providers with source, example URL, and accepted domains. |
+
 ## Configuration
 
 | Env var | Default | Purpose |
@@ -107,12 +164,17 @@ src/
     types/          Shared types: ArticleMetadata schema, Provider interface
     pipes/          ZodValidationPipe (validates controller input)
     filters/        AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
+    errors/         shapeError() — shared error shaping (filter, CLI, MCP)
   modules/
     medium/         Medium feature: controller, service, DTOs, errors
     devto/          Dev.to feature: controller, service, DTOs, errors
     substack/       Substack feature: controller, service, DTOs, errors
+  mcp/              MCP server: server.ts (createMcpServer/startMcpServer/handleHttpRequest), tools.ts (ingest_article, list_providers)
   app.module.ts     Root module
   main.ts           Bootstrap (NestJS + Fastify + Bun, URI versioning, global filter)
+  ingest.ts         Shared router: service registry + ingest(url) — used by CLI + MCP
+  cli.ts            CLI entry: citty binary, `mdingest <url>` + `mdingest mcp` subcommand
+  mcp.controller.ts MCP HTTP endpoint at /v1/mcp (Streamable HTTP transport)
   worker.ts         Cloudflare Worker — routes requests to the Docker container
 
 shared/
@@ -128,7 +190,16 @@ web/                 Astro static site (React islands)
     icons/          Provider SVG logos (medium, devto, substack)
 ```
 
-Each provider implements a `Provider` interface (`matches`, `convert`). Adding a provider = new folder under `modules/`, no changes to core or common. Service classes work with direct `new` outside NestJS, enabling future CLI and MCP entry points without duplication.
+Four entry points share the same ingestion logic via `src/ingest.ts`:
+
+| Entry point | File | How |
+|---|---|---|
+| HTTP API | `src/main.ts` | NestJS + Fastify, DI wires services, controller delegates to service |
+| CLI | `src/cli.ts` | citty binary: `mdingest <url>` → markdown to stdout, `--json` for structured, `--provider` override |
+| MCP server (stdio) | `src/cli.ts mcp` | stdio JSON-RPC: `ingest_article` + `list_providers` tools |
+| MCP server (HTTP) | `src/mcp.controller.ts` | Streamable HTTP at `/v1/mcp` — same tools, remote, zero local setup |
+
+Each provider implements a `Provider` interface (`matches`, `convert`). Adding a provider = new folder under `modules/`, no changes to core or common. Service classes work with direct `new` outside NestJS — CLI and MCP instantiate them via `src/ingest.ts` without booting NestJS.
 
 URL detection is centralized in `shared/providers.ts` — `detectProvider(url)` is the single source of truth used by both the frontend (auto-detect) and all 3 backend DTOs (`isValid*Url` delegate to it).
 
@@ -147,6 +218,8 @@ Errors return `{ code, message, details?, traceId }` with namespaced codes (`MED
 | turndown | HTML→Markdown (Substack provider) |
 | oxlint | Linting |
 | @cloudflare/containers | Cloudflare Containers deployment |
+| citty | CLI arg parsing + `--help` generation |
+| @modelcontextprotocol/sdk | MCP server over stdio for AI tools |
 
 ### Frontend
 
@@ -172,8 +245,9 @@ The `verify` script runs `impeccable` to scan the built frontend for UI anti-pat
 | Dev.to provider | Runtime-verified | `GET /v1/devto?url=...` — Forem API, liquid tag transform, 38 unit tests |
 | Substack provider | Runtime-verified | `GET /v1/substack?url=...` — public API + turndown HTML→Markdown, free posts only, home URL redirect resolution, 32 unit tests |
 | Web UI | Runtime-verified | Astro + React islands — landing page, ingest page with md/json tabs + line numbers, API docs |
-| CLI | Planned | `bun run src/cli.ts <url>` — direct `new` services, print markdown |
-| MCP server | Planned | Expose `ingest_article` tool — same services, `@modelcontextprotocol/sdk` |
+| CLI | Runtime-verified | `bun run src/cli.ts <url>` → markdown to stdout; `--json` for structured; `--provider` override; `mdingest providers` lists sources |
+| MCP server (stdio) | Runtime-verified | `bun run src/cli.ts mcp` → stdio JSON-RPC; `ingest_article` + `list_providers` tools; all 3 providers verified |
+| MCP server (HTTP) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; same tools; initialize handshake + session ID; all 3 providers verified |
 
 ## Development
 
@@ -183,6 +257,8 @@ bun run dev       # start backend dev server with hot reload (port 3000)
 bun run dev:web   # start Astro dev server (frontend only, port 4321)
 bun run build:web # build Astro frontend to web/dist/
 bun run test      # run unit tests (vitest)
+bun run cli       # run CLI (bun run src/cli.ts <url>)
+bun run mcp       # start MCP server (bun run src/cli.ts mcp)
 ```
 
 ## Attribution

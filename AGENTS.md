@@ -76,16 +76,19 @@ const service = new MediumService(new FreediumService(), new CacheService());
 const result = await service.convert(url);  // works without booting NestJS
 ```
 
-This enables three entry points sharing the same logic, no duplication:
+This enables four entry points sharing the same logic, no duplication:
 
 | Entry point | File | How it works |
 |---|---|---|
 | HTTP API | `src/main.ts` | NestJS + Fastify, DI wires services, controller delegates to service |
-| CLI | `src/cli.ts` (planned) | `new` services directly, call `convert()`, print to stdout |
-| MCP server | `src/mcp.ts` (planned) | `new` services directly, expose `ingest_article` tool |
+| CLI | `src/cli.ts` | citty binary: `mdingest <url>` → markdown to stdout, `--json` for `{metadata, markdown}`, `--provider` override. Routes to shared `ingest()` in `src/ingest.ts`. `Logger.overrideLogger(false)` silences stdout logs. |
+| MCP server (stdio) | `src/cli.ts mcp` | `mdingest mcp` subcommand → stdio JSON-RPC. Two tools: `ingest_article` (auto-detect, markdown default, `json: true` for structured) + `list_providers` (discover sources + example URLs). `src/mcp/server.ts` + `src/mcp/tools.ts`. |
+| MCP server (HTTP) | `src/mcp.controller.ts` | `POST /v1/mcp` → Streamable HTTP transport (`WebStandardStreamableHTTPServerTransport`). Same tools as stdio, remote, zero local setup. Stateful mode with session IDs. Lazy-initialized on first request via `handleHttpRequest()` in `src/mcp/server.ts`. |
 
-No refactor needed — the classes already work standalone. CLI and MCP are thin shells
-that instantiate the same services and call the same `convert()` method.
+CLI and MCP are thin shells over `src/ingest.ts` — a shared router that instantiates
+the services once at module load and delegates to `convert()`. Error shaping is shared
+via `src/common/errors/shape-error.ts` (`shapeError()`), reused by AllExceptionsFilter,
+CLI, and MCP.
 
 ### Layer separation
 
@@ -96,9 +99,14 @@ integrations/freedium/→ HTTP client for Freedium mirror (download + data endpo
 common/types/         → Shared types: ArticleMetadata schema, Provider interface
 common/pipes/         → ZodValidationPipe (validates controller input)
 common/filters/       → AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
+common/errors/        → shapeError() — shared error shaping (filter, CLI, MCP)
 modules/medium/       → Medium feature: controller, service, DTOs, errors
 modules/devto/        → Dev.to feature: controller, service, DTOs, errors
 modules/substack/     → Substack feature: controller, service, DTOs, errors
+mcp/                  → MCP server: server.ts (createMcpServer/startMcpServer/handleHttpRequest), tools.ts (ingest_article, list_providers)
+ingest.ts             → Shared router: service registry + ingest(url, opts?) — used by CLI + MCP
+cli.ts                → CLI entry: citty binary, `mdingest <url>` + `mdingest mcp` subcommand
+mcp.controller.ts     → MCP HTTP endpoint at /v1/mcp (Streamable HTTP transport, NestJS controller)
 ```
 
 **The separation rule (NestJS 6-bucket layout):**
@@ -131,7 +139,9 @@ the DTOs are thin wrappers: `isValidDevtoUrl = (url) => detectProvider(url) === 
 ### Root route (`GET /`)
 
 Returns API metadata as JSON: `{ name, version, endpoints, source }`. Implemented in
-`AppController` (`src/app.controller.ts`). Endpoints object lists all provider routes.
+`AppController` (`src/app.controller.ts`). Endpoints object lists all REST provider routes
+(`/v1/medium`, `/v1/devto`, `/v1/substack`). The MCP endpoint (`/v1/mcp`) is not listed
+here — it uses JSON-RPC, not REST query params.
 
 ### Data flow (dual-source)
 
@@ -265,9 +275,9 @@ web/
     layouts/
       Base.astro         Shared layout — header (sticky, backdrop-blur), footer, meta tags
     pages/
-      index.astro        Landing page — hero, the problem, supported sources, source code, API examples
+      index.astro        Landing page — hero, the problem, supported sources, three access methods (HTTP API, CLI, MCP), source code
       ingest.astro       Ingest page — Ingestor island + supported sources + output formats
-      docs.astro         API documentation — endpoints, error codes, frontmatter fields
+      docs.astro         API documentation — endpoints, response formats, error codes, frontmatter fields, CLI usage, MCP server config + tools
     styles/
       global.css         Design tokens, base styles, shared components (.btn, .provider-icon, .terminal)
 ```
@@ -364,6 +374,8 @@ for UI anti-patterns:
 | `lru-cache` | In-memory LRU cache for fetched articles | Custom Map-based cache lacks TTL. lru-cache is the standard, 11.5.2, actively maintained. |
 | `zod` | Runtime validation of request params and response shape | Hand-written validation drifts. Zod schemas infer TS types. 3.25.76. |
 | `@cloudflare/containers` | Container class for Cloudflare Containers deployment | Worker routes requests to the NestJS+Bun Docker container. 0.3.7. |
+| `citty` | CLI arg parsing + `--help` generation | Commander is heavier. citty is ~3KB, works on Bun + Node. 0.2.2. |
+| `@modelcontextprotocol/sdk` | MCP server over stdio + HTTP for AI tools (Claude, Cursor) | Official spec implementation. Same services + `ingest()` router as CLI, wrapped as JSON-RPC tools. Stdio transport for local, `WebStandardStreamableHTTPServerTransport` for remote `/v1/mcp` endpoint. 1.30.0. |
 | `@cloudflare/workers-types` (dev) | TypeScript types for Cloudflare Workers APIs (`DurableObjectNamespace`, `ExportedHandler`) | Required for `src/worker.ts` typechecking. |
 | `turndown` | HTML→Markdown for Substack provider (body_html → markdown) | Substack API returns HTML only. turndown's `addRule()` API enables per-component custom rules for Substack's 8+ custom HTML components (footnotes, LaTeX, embeds, mentions). Alternatives: `html-to-md` (no custom rule API, only skip tags), `node-html-markdown` (limited `customTranslators`). 7.2.4, 1 dep (`@mixmark-io/domino`). |
 | `@types/turndown` (dev) | TypeScript types for turndown | Required for typechecking. 5.0.6. |
@@ -381,7 +393,7 @@ for UI anti-patterns:
 | `react` + `react-dom` | UI library for interactive islands | Needed for the Ingestor component (state, effects, animations). 19.2.8. |
 | `motion` | Animation library (framer-motion successor) | Used for enter/exit animations on results and errors. 13.1.1. |
 | `lucide-react` | Icon library (React) | Used in Ingestor for Copy, Download, AlertCircle, etc. 1.33.0. |
-| `@lucide/astro` | Icon library (Astro) | Used in static pages for ChevronRight, ArrowRight, GitHub icon. 1.33.0. |
+| `@lucide/astro` | Icon library (Astro) | Used in static pages for ChevronRight, ArrowRight, LockOpen, Broom, Braces, Database, FileInput, BookOpen, Star, Heart, GitHub icon. 1.33.0. |
 | `@fontsource-variable/geist` + `geist-mono` | Font loading | Geist (body) + Geist Mono (code/buttons/labels). Self-hosted, no Google Fonts. |
 | `@types/react` + `@types/react-dom` (dev) | TypeScript types for React | Required for typechecking the Ingestor island. 19.2.18 / 19.2.5. |
 
@@ -465,8 +477,9 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 | Entry point | Status | Target |
 |---|---|---|
 | HTTP API (`src/main.ts`) | Deployed | Cloudflare Containers — `https://mdingest.knightker.workers.dev` |
-| CLI (`src/cli.ts`) | Planned | `bun run src/cli.ts <url>` → markdown to stdout |
-| MCP server (`src/mcp.ts`) | Planned | Expose `ingest_article` tool for AI agents |
+| CLI (`src/cli.ts`) | Runtime-verified | `bun run src/cli.ts <url>` → markdown to stdout; `--json` for `{metadata, markdown}`; `--provider` override |
+| MCP server (stdio) (`src/cli.ts mcp`) | Runtime-verified | `bun run src/cli.ts mcp` → stdio JSON-RPC; two tools: `ingest_article` (auto-detect, markdown default, `json: true` for structured) + `list_providers` (discover sources + example URLs) |
+| MCP server (HTTP) (`src/mcp.controller.ts`) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; initialize handshake returns session ID; `tools/list` returns both tools; `ingest_article` with real URL → markdown text, `isError: false`; bad URL → `isError: true` with `[CODE] message`; `list_providers` → 3 providers with metadata + 42 Medium domains |
 
 HTTP API runs on Cloudflare Containers. A Worker (`src/worker.ts`) routes all requests
 to a NestJS + Bun Docker container. The Worker extends the `Container` class from
