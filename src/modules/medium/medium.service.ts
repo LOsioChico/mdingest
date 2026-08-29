@@ -11,7 +11,7 @@ import { FreediumUnavailableError, MediumInvalidUrlError, MediumParseError } fro
  * Medium provider — converts Medium article URLs to markdown.
  *
  * Dual-source approach:
- *   1. Freedium download endpoint → finished markdown (tags, pipe tables, code languages, <picture> images)
+ *   1. Freedium download endpoint → finished markdown (tags, code languages, <picture> images)
  *   2. Freedium __data.json → metadata (author, reading_time, cover image URL)
  *
  * The download endpoint gives us 90% of the content. We enrich it with:

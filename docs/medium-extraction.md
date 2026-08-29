@@ -121,23 +121,6 @@ That's it — 4 markup types. No strikethrough, no sub, no sup, no mark, no kbd.
 These are **Medium platform limitations**, not extraction gaps. Medium's
 editor is intentionally minimal — 12 paragraph types, 4 markup types.
 
-### Unverified claim: "pipe tables"
-
-`AGENTS.md` and service comments mention "pipe tables" from the download
-endpoint. The Freedium renderer source (`renderer.py`) shows **no TABLE
-paragraph type** and no table rendering logic. Medium's data model
-fundamentally has no tables.
-
-The `/api/download` endpoint code is not in the [GitHub repo](https://github.com/Freedium-cfd/web)
-— it may be custom to the `freedium-mirror.cfd` deployment. This claim
-needs curl verification when the Freedium mirror is back online. Flagged
-in `KNOWN_GAPS.md`.
-
-**Hypothesis:** The "pipe tables" claim may have come from an older
-Freedium version, or from content where authors used preformatted text
-with `|` characters inside a `PRE` block (which would look like a table
-but is actually a code block).
-
 ## `<picture>` image conversion
 
 Freedium renders images as responsive `<picture>` HTML:

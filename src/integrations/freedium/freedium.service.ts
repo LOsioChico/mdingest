@@ -6,7 +6,7 @@ import { config } from "../../core/config/config.ts";
  * Freedium bypasses Medium's paywall and provides two access modes:
  *
  * 1. Download endpoint: GET /api/download?url=<medium_url>
- *    Returns finished markdown with frontmatter, tags, pipe tables, code languages.
+ *    Returns finished markdown with frontmatter, tags, code languages.
  *    Images are included as <picture> HTML tags (converted to markdown by MediumService).
  *    Renderer is non-deterministic — ~20% of requests return [Embedded content] placeholders.
  *
@@ -49,7 +49,7 @@ export class FreediumService {
 
   /**
    * Fetch finished markdown from Freedium's download endpoint.
-   * Returns markdown with frontmatter, tags, pipe tables, code languages.
+   * Returns markdown with frontmatter, tags, code languages.
    *
    * Freedium's renderer is non-deterministic — ~20% of requests return
    * `[Embedded content: <hash>]` placeholders instead of rendered tables.

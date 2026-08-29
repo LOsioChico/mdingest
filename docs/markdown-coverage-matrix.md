@@ -141,7 +141,7 @@ component handlers for Substack-specific HTML structures.
 
 | Claim | Source | Status |
 |---|---|---|
-| "Freedium returns pipe tables" | `AGENTS.md`, `medium.service.ts` comments | **Unverified** — Freedium renderer source shows no TABLE paragraph type. Medium's data model has no tables. The `/api/download` endpoint code is not in the GitHub repo (may be custom to the mirror deployment). Needs verification when Freedium is back online. |
+| "Freedium returns pipe tables" | `AGENTS.md`, `medium.service.ts` comments | **Resolved** — claim removed. Medium's data model has no tables; Freedium renderer.py has no TABLE paragraph type. |
 | "Freedium returns code languages" | `AGENTS.md` | **Verified** — renderer.py extracts `lang` from `codeBlockMetadata` |
 | "Freedium returns tags" | `AGENTS.md` | **Verified** — renderer.py extracts tags from GraphQL `post.tags` |
 
