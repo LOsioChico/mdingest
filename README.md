@@ -7,8 +7,8 @@
 
 API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
 
-Currently supports **Medium** (via [Freedium](https://codeberg.org/Freedium-cfd/web) paywall bypass) and **Dev.to** (via Forem API).
-Designed for future Substack and other providers.
+Currently supports **Medium** (via [Freedium](https://codeberg.org/Freedium-cfd/web) paywall bypass), **Dev.to** (via Forem API), and **Substack** (free posts via public API + HTML→Markdown).
+Designed for future providers.
 
 ## Quick start
 
@@ -26,6 +26,7 @@ Deployed at `https://mdingest.knightker.workers.dev`:
 ```bash
 curl "https://mdingest.knightker.workers.dev/v1/medium?url=https://medium.com/@user/article-id"
 curl "https://mdingest.knightker.workers.dev/v1/devto?url=https://dev.to/user/article-slug"
+curl "https://mdingest.knightker.workers.dev/v1/substack?url=https://pub.substack.com/p/article-slug"
 ```
 
 ### Local development
@@ -34,6 +35,7 @@ curl "https://mdingest.knightker.workers.dev/v1/devto?url=https://dev.to/user/ar
 bun run dev
 curl "http://localhost:3000/v1/medium?url=https://medium.com/@user/article-id"
 curl "http://localhost:3000/v1/devto?url=https://dev.to/user/article-slug"
+curl "http://localhost:3000/v1/substack?url=https://pub.substack.com/p/article-slug"
 ```
 
 Returns `text/markdown` with YAML frontmatter + clean body:
@@ -111,6 +113,8 @@ src/
     filters/        AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
   modules/
     medium/         Medium feature: controller, service, DTOs, errors
+    devto/          Dev.to feature: controller, service, DTOs, errors
+    substack/       Substack feature: controller, service, DTOs, errors
   app.module.ts     Root module
   main.ts           Bootstrap (NestJS + Fastify + Bun, URI versioning, global filter)
   worker.ts         Cloudflare Worker — routes requests to the Docker container
@@ -139,7 +143,7 @@ Cloudflare-blocked without auth).
 custom domains (`itnext.io`, `levelup.gitconnected.com`, `betterprogramming.pub`, etc.).
 
 **Provider pattern:** Each content source implements the `Provider` interface.
-Adding a new provider (Substack) only requires a new folder under `modules/`
+Adding a new provider only requires a new folder under `modules/`
 — no changes to core or common modules.
 
 **Multi-entry-point:** Service classes use `@Injectable()` (NestJS DI metadata) but
@@ -149,7 +153,9 @@ MCP server (planned).
 
 **Error contract:** All errors return `{ code, message, details?, traceId }` with
 namespaced codes (`VALIDATION.FAILED`, `MEDIUM.INVALID_URL`, `MEDIUM.FREEDIUM_UNAVAILABLE`,
-`MEDIUM.PARSE_FAILED`, `INTERNAL.ERROR`).
+`MEDIUM.PARSE_FAILED`, `DEVTO.INVALID_URL`, `DEVTO.UNAVAILABLE`, `DEVTO.PARSE_FAILED`,
+`SUBSTACK.INVALID_URL`, `SUBSTACK.PAID_POST`, `SUBSTACK.UNAVAILABLE`, `SUBSTACK.PARSE_FAILED`,
+`INTERNAL.ERROR`).
 
 ## Tech stack
 
@@ -157,6 +163,7 @@ namespaced codes (`VALIDATION.FAILED`, `MEDIUM.INVALID_URL`, `MEDIUM.FREEDIUM_UN
 - **Framework:** NestJS + Fastify
 - **Validation:** Zod
 - **Caching:** lru-cache (in-memory)
+- **HTML→Markdown:** turndown (Substack provider)
 - **Linting:** oxlint
 - **Deployment:** Cloudflare Containers
 
@@ -174,9 +181,9 @@ We use two Freedium endpoints: `/api/download` (finished markdown) and `__data.j
 |---|---|---|
 | HTTP API | Deployed | `https://mdingest.knightker.workers.dev/v1/medium?url=...` — Cloudflare Containers |
 | Dev.to provider | Implemented | `GET /v1/devto?url=...` — Forem API, liquid tag transform, 38 unit tests |
+| Substack provider | Implemented | `GET /v1/substack?url=...` — public API + turndown HTML→Markdown, free posts only, 32 unit tests |
 | CLI | Planned | `bun run src/cli.ts <url>` — direct `new` services, print markdown |
 | MCP server | Planned | Expose `convert_article` tool — same services, `@modelcontextprotocol/sdk` |
-| Substack provider | Researched | HTML→Markdown needs `turndown` dep + custom component handlers. Research: [`docs/substack-extraction.md`](docs/substack-extraction.md) |
 
 ## Development
 

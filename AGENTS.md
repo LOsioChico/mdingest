@@ -1,8 +1,9 @@
 # AGENTS.md — mdingest Operating Contract
 
 > API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
-> Currently supports Medium (via Freedium paywall bypass) and Dev.to (via Forem API).
-> Designed for future Substack and other providers.
+> Currently supports Medium (via Freedium paywall bypass), Dev.to (via Forem API),
+> and Substack (free posts via public API + HTML→Markdown).
+> Designed for future providers.
 
 Operating contract for any AI agent (Devin, Claude Code, Cursor) working on this repo.
 Read this file before writing code.
@@ -47,9 +48,10 @@ article source — no paywalls, no UI noise, no ads, just content.
 
 ### Multi-entry-point design
 
-The conversion logic lives in service classes (`MediumService`, `FreediumService`,
-`CacheService`) decorated with `@Injectable()`. The decorator is just DI metadata —
-it does NOT prevent direct instantiation. All services work with `new` outside NestJS:
+The conversion logic lives in service classes (`MediumService`, `DevtoService`,
+`SubstackService`, `FreediumService`, `CacheService`) decorated with `@Injectable()`.
+The decorator is just DI metadata — it does NOT prevent direct instantiation.
+All services work with `new` outside NestJS:
 
 ```typescript
 const service = new MediumService(new FreediumService(), new CacheService());
@@ -78,13 +80,14 @@ common/pipes/         → ZodValidationPipe (validates controller input)
 common/filters/       → AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
 modules/medium/       → Medium feature: controller, service, DTOs, errors
 modules/devto/        → Dev.to feature: controller, service, DTOs, errors
+modules/substack/     → Substack feature: controller, service, DTOs, errors
 ```
 
 **The separation rule (NestJS 6-bucket layout):**
 - `core/` — app-wide infrastructure (config, cache). Could be `@Global()`.
 - `integrations/` — external service clients (Freedium). Thin wrappers, no business logic.
 - `common/` — generic, domain-less utilities (types, pipes, filters). No business logic.
-- `modules/` — business features (Medium, Dev.to). Owns its controllers, services, DTOs, errors.
+- `modules/` — business features (Medium, Dev.to, Substack). Owns its controllers, services, DTOs, errors.
 
 Provider-specific logic (metadata extraction, image replacement, URL validation) lives in
 `modules/<name>/`. If you're tempted to add a Medium-specific concern in `common/`, stop.
@@ -150,7 +153,7 @@ interface Provider {
 }
 ```
 
-Future providers (Substack) add a new folder under `modules/`, implement the
+Future providers add a new folder under `modules/`, implement the
 interface, and register in `app.module.ts`. Common modules don't change.
 
 ### Error contract
@@ -166,10 +169,14 @@ All errors follow the standard shape: `{ code, message, details?, traceId }`
 | `DEVTO.INVALID_URL` | 400 | URL is not a Dev.to article |
 | `DEVTO.UNAVAILABLE` | 503 | Dev.to API down or timed out |
 | `DEVTO.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
+| `SUBSTACK.INVALID_URL` | 400 | URL is not a Substack article |
+| `SUBSTACK.PAID_POST` | 403 | Post is behind a paywall (only free posts convertible) |
+| `SUBSTACK.UNAVAILABLE` | 503 | Substack API down or timed out |
+| `SUBSTACK.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
 | `INTERNAL.ERROR` | 500 | Unexpected error |
 
 Typed domain errors in `modules/<provider>/errors/` extend semantic Nest exceptions
-(`BadRequestException`, `ServiceUnavailableException`, `BadGatewayException`).
+(`BadRequestException`, `ForbiddenException`, `ServiceUnavailableException`, `BadGatewayException`).
 The global `AllExceptionsFilter` in `common/filters/` shapes every error to the standard contract.
 
 ### API versioning
@@ -187,16 +194,19 @@ Configured in `main.ts` via `app.enableVersioning({ type: VersioningType.URI, de
 | `zod` | Runtime validation of request params and response shape | Hand-written validation drifts. Zod schemas infer TS types. 3.25.76. |
 | `@cloudflare/containers` | Container class for Cloudflare Containers deployment | Worker routes requests to the NestJS+Bun Docker container. 0.3.7. |
 | `@cloudflare/workers-types` (dev) | TypeScript types for Cloudflare Workers APIs (`DurableObjectNamespace`, `ExportedHandler`) | Required for `src/worker.ts` typechecking. |
+| `turndown` | HTML→Markdown for Substack provider (body_html → markdown) | Substack API returns HTML only. turndown's `addRule()` API enables per-component custom rules for Substack's 8+ custom HTML components (footnotes, LaTeX, embeds, mentions). Alternatives: `html-to-md` (no custom rule API, only skip tags), `node-html-markdown` (limited `customTranslators`). turndown has `turndown-plugin-gfm` (already installed) for GFM tables/strikethrough. 7.2.4, 1 dep (`@mixmark-io/domino`). |
+| `@types/turndown` (dev) | TypeScript types for turndown | Required for typechecking. 5.0.6. |
 
 **What we deliberately did NOT add:**
 
 | Rejected | Why |
 |---|---|
-| `turndown` | No longer needed — Freedium's `/api/download` endpoint returns finished markdown directly. Removed in favor of dual-source approach. |
 | `cheerio` | No longer needed — image replacement done with regex on `<picture>` tags in markdown body. No HTML parsing required. |
 | `@nestjs/config` | Overkill for 6 config values. Hardcoded defaults + env override is simpler. |
 | `@nestjs/platform-express` | Fastify is faster and officially supported by NestJS. |
 | `redis` | In-memory LRU is sufficient for a personal API. No external service to manage. |
+| `html-to-md` | No custom rule API — only supports `renderCustomTags: 'SKIP'`. Can't transform Substack's custom components (footnotes→`[^N]`, LaTeX→`$$...$$`, etc.). |
+| `node-html-markdown` | `customTranslators` is less flexible than turndown's `addRule(filter, replacement)`. Larger dependency tree (`node-html-parser`). |
 
 ## Engineering discipline
 
@@ -247,11 +257,11 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 
 ## Attribution
 
-This project depends on [Freedium](https://codeberg.org/Freedium-cfd/web) for Medium
-paywall bypass. Freedium is an open-source service that fetches Medium articles via
-their GraphQL API and renders them as accessible HTML and downloadable Markdown.
-We use two Freedium endpoints: `/api/download` (finished markdown) and `__data.json`
-(SvelteKit SSR data with metadata).
+| Provider | Source | Notes |
+|---|---|---|
+| Medium | [Freedium](https://codeberg.org/Freedium-cfd/web) | Open-source paywall bypass. Two endpoints: `/api/download` (markdown) + `__data.json` (metadata). |
+| Dev.to | [Forem API](https://developers.forem.com/api) | Public, unauthenticated. `GET /api/articles/{username}/{slug}` returns native markdown + metadata. |
+| Substack | Substack public API | `GET https://{domain}/api/v1/posts/{slug}`. Free posts only — paid posts are server-side truncated. |
 
 ## Deployment
 

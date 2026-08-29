@@ -1,8 +1,8 @@
 # Substack extraction — free vs paid posts
 
-> Research findings for the future Substack provider. No code yet — this
-> documents what the API returns, the hard limit on paid content, and the
-> full content fidelity analysis for free posts.
+> Reference for the Substack provider (implemented). Documents what the API
+> returns, the hard limit on paid content, and the full content fidelity
+> analysis for free posts.
 
 ## How to identify free vs paid posts
 
@@ -208,31 +208,38 @@ All work by pasting a URL into the editor. Each renders as a
 `data-component-name="{Platform}ToDOM"` div with `data-attrs` JSON containing
 the embed metadata.
 
-## Extraction strategy (free posts only)
+## Extraction strategy (implemented — free posts only)
 
-1. `GET /api/v1/archive?sort=new&offset=0&limit=50` — list posts
-2. Filter to `audience === "everyone"` — skip everything else
-3. `GET /api/v1/posts/{slug}` — fetch full `body_html` for free posts
-4. Convert `body_html` to Markdown:
-   a. Standard HTML elements → Markdown (turndown or similar)
-   b. Custom Substack components → Markdown (custom rules, see above)
-   c. Strip subscribe buttons/widgets
-5. Build frontmatter from post metadata (title, subtitle, author, date, etc.)
+1. Parse URL → extract `{ domain, slug }` from `https://{domain}/p/{slug}`
+2. `GET https://{domain}/api/v1/posts/{slug}` — fetch post JSON (single endpoint)
+3. Check `audience === "only_paid"` → throw `SUBSTACK.PAID_POST` (403)
+4. `preprocessHtml(body_html)` — regex-replace empty-element components:
+   - LaTeX (`LatexBlockToDOM`) → `<p>$$expr$$</p>`
+   - Twitter (`Twitter2ToDOM`) → `<blockquote>` placeholder
+   - Mentions (`MentionToDOM`) → `<a>` link placeholder
+   - YouTube (`Youtube2ToDOM`) → `<a>` link placeholder
+   - (turndown skips empty `<div></div>` — filters never fire for childless elements)
+5. `turndown.turndown(preprocessed)` — standard HTML→Markdown + turndown rules for:
+   - Footnote anchors (`FootnoteAnchorToDOM`) → `[^N]`
+   - Footnote definitions (`FootnoteToDOM`) → `[^N]: definition`
+   - Image captions (`<figcaption class="image-caption">`) → `*caption*`
+   - Embedded posts (`EmbeddedPostToDOM`) → `[title](url)`
+   - Subscribe buttons/widgets → stripped (`td.remove()`)
+6. `cleanupMarkdown(md)` — strip leftover `<span>` tags, collapse blank lines
+7. Inject cover image at top of body (Substack body_html has no H1)
+8. Build frontmatter from post metadata + prepend to body
 
-### HTML→Markdown conversion requirements
+### HTML→Markdown conversion (implemented)
 
-Unlike Dev.to (native Markdown) and Medium (Freedium gives Markdown),
-Substack requires HTML→Markdown conversion. Options:
+Chose `turndown` + custom rules. Alternatives rejected:
+- `html-to-md`: no custom rule API, only `renderCustomTags: 'SKIP'`
+- `node-html-markdown`: `customTranslators` less flexible than `addRule(filter, replacement)`
 
-| Option | Pros | Cons |
-|---|---|---|
-| `turndown` | Well-maintained, handles standard HTML | Needs custom rules for Substack components |
-| Custom regex converter | No dependency, full control | More code, edge cases to handle |
-| `turndown` + custom rules | Best of both | One new dependency |
-
-Recommendation: `turndown` + custom rules for Substack-specific components
-(footnotes, LaTeX, embeds, mentions). ~100 lines of custom rules on top of
-turndown's standard HTML handling.
+Key implementation detail: turndown skips empty elements (filters never fire for
+`<div></div>`). LaTeX, Twitter, mentions, and YouTube all render as empty elements
+with data in `data-attrs`. These are pre-processed with regex before turndown runs.
+Components with child content (footnotes, image captions, embedded posts) use
+turndown's `addRule()` API.
 
 ## Why paid posts are not extracted
 

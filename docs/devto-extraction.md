@@ -1,7 +1,7 @@
 # Dev.to extraction — free public API, no paywall
 
-> Research findings for the future Dev.to provider. No code yet — this
-> documents what the Forem API returns and confirms there is no paid content.
+> Reference for the Dev.to provider (implemented). Documents what the Forem API
+> returns and confirms there is no paid content.
 
 ## Key finding: there is no paywall
 
