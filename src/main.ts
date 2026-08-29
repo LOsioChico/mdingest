@@ -25,6 +25,7 @@ async function bootstrap(): Promise<void> {
     new FastifyAdapter({
       logger: false,
       genReqId: () => randomUUID(),
+      trustProxy: true,
     }),
   );
 

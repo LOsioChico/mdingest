@@ -164,6 +164,7 @@ src/
     types/          Shared types: ArticleMetadata schema, Provider interface
     pipes/          ZodValidationPipe (validates controller input)
     filters/        AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
+    guards/         RateLimitGuard (30 req/min per IP, global via APP_GUARD)
     errors/         shapeError() — shared error shaping (filter, CLI, MCP)
   modules/
     medium/         Medium feature: controller, service, DTOs, errors
@@ -203,7 +204,7 @@ Each provider implements a `Provider` interface (`matches`, `convert`). Adding a
 
 URL detection is centralized in `shared/providers.ts` — `detectProvider(url)` is the single source of truth used by both the frontend (auto-detect) and all 3 backend DTOs (`isValid*Url` delegate to it).
 
-Errors return `{ code, message, details?, traceId }` with namespaced codes (`MEDIUM.INVALID_URL`, `SUBSTACK.PAID_POST`, `VALIDATION.FAILED`, etc.). Full contract in [`AGENTS.md`](AGENTS.md).
+Errors return `{ code, message, details?, traceId }` with namespaced codes (`MEDIUM.INVALID_URL`, `SUBSTACK.PAID_POST`, `VALIDATION.FAILED`, `RATE_LIMITED`, etc.). Full contract in [`AGENTS.md`](AGENTS.md). All endpoints are rate-limited at 30 req/min per IP.
 
 ## Tech stack
 
@@ -248,6 +249,7 @@ The `verify` script runs `impeccable` to scan the built frontend for UI anti-pat
 | CLI | Runtime-verified | `bun run src/cli.ts <url>` → markdown to stdout; `--json` for structured; `--provider` override; `mdingest providers` lists sources |
 | MCP server (stdio) | Runtime-verified | `bun run src/cli.ts mcp` → stdio JSON-RPC; `ingest_article` + `list_providers` tools; all 3 providers verified |
 | MCP server (HTTP) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; same tools; initialize handshake + session ID; all 3 providers verified |
+| Rate limiting | Runtime-verified | Global `RateLimitGuard` via `APP_GUARD` — 30 req/min per IP; 31st request returns 429 `{ code: "RATE_LIMITED", details: { retryAfter } }` |
 
 ## Development
 

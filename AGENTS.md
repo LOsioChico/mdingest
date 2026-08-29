@@ -99,6 +99,7 @@ integrations/freedium/→ HTTP client for Freedium mirror (download + data endpo
 common/types/         → Shared types: ArticleMetadata schema, Provider interface
 common/pipes/         → ZodValidationPipe (validates controller input)
 common/filters/       → AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
+common/guards/        → RateLimitGuard (30 req/min per IP, global via APP_GUARD)
 common/errors/        → shapeError() — shared error shaping (filter, CLI, MCP)
 modules/medium/       → Medium feature: controller, service, DTOs, errors
 modules/devto/        → Dev.to feature: controller, service, DTOs, errors
@@ -152,7 +153,7 @@ GET /v1/medium?url=...
   → MediumService.convert(url)
     → CacheService.get(url) — return cached if hit
     → FreediumService.fetchMarkdown(url) — GET /api/download?url=...
-        Returns finished markdown with frontmatter, tags, pipe tables, code languages
+        Returns finished markdown with frontmatter, tags, code languages
         Retries up to 5 times if [Embedded content] placeholders detected (~20% failure rate)
     → FreediumService.fetchArticleData(url) — GET /<url>/__data.json
         Returns SvelteKit devalue data: article metadata (author, reading_time, postImage)
@@ -186,16 +187,16 @@ Freedium exposes two access modes, each with different data:
 
 | Source | Gives us | Misses |
 |---|---|---|
-| `/api/download` | Tags, pipe tables, code languages, frontmatter, published/updated dates, free flag, inline images as `<picture>` HTML | Author name, reading time, cover image |
-| `__data.json` | Author name, reading time, postImage (cover) | Tags, pipe tables, code languages |
+| `/api/download` | Tags, code languages, frontmatter, published/updated dates, free flag, inline images as `<picture>` HTML | Author name, reading time, cover image |
+| `__data.json` | Author name, reading time, postImage (cover) | Tags, code languages |
 
-Combining both gives us everything accessible. Tags and pipe tables are not recoverable
+Combining both gives us everything accessible. Tags are not recoverable
 from any other source (Medium's GraphQL API is Cloudflare-blocked without auth).
 
 ### Freedium renderer non-determinism
 
 Freedium's `/api/download` endpoint is non-deterministic — ~20% of requests return
-`[Embedded content: <hash>]` placeholders instead of rendered pipe tables. We retry
+`[Embedded content: <hash>]` placeholders instead of rendered content. We retry
 up to 5 times and keep the response with the fewest placeholders. At ~80% clean rate
 per attempt, 5 retries = ~99.97% chance of a clean fetch.
 
@@ -241,6 +242,7 @@ All errors follow the standard shape: `{ code, message, details?, traceId }`
 | `SUBSTACK.PARSE_FAILED` | 502 | Article data parsing failed (e.g. cache corruption) |
 | `INTERNAL.ERROR` | 500 | Unexpected error |
 | `NOT_FOUND` | 404 | Unknown route (NestJS NotFoundException) |
+| `RATE_LIMITED` | 429 | Too many requests (30/min per IP). `details.retryAfter` has seconds until reset. |
 
 Typed domain errors in `modules/<provider>/errors/` extend semantic Nest exceptions
 (`BadRequestException`, `ForbiddenException`, `ServiceUnavailableException`, `BadGatewayException`).
@@ -254,6 +256,19 @@ appended (e.g. "That URL doesn't match the expected format. Must be a Substack a
 
 URI versioning: `/v1/medium?url=...`. Bump to `/v2/` on breaking changes.
 Configured in `main.ts` via `app.enableVersioning({ type: VersioningType.URI, defaultVersion: "1" })`.
+
+### Rate limiting
+
+Global `RateLimitGuard` (`src/common/guards/rate-limit.guard.ts`) registered via
+`APP_GUARD` in `app.module.ts`. 30 requests per minute per IP across all endpoints.
+In-memory `Map<string, { count, resetAt }>` — resets on container restart (acceptable
+for singleton deployment with `sleepAfter: "5m"`).
+
+`trustProxy: true` in FastifyAdapter config so `req.ip` reads the real client IP from
+`x-forwarded-for` (traffic flows: client → Cloudflare Worker → Container).
+
+On limit exceeded: 429 with `{ code: "RATE_LIMITED", message, details: { retryAfter }, traceId }`.
+Lazy GC: expired entries cleaned when Map exceeds 1000 entries.
 
 ## Frontend (`web/`)
 
@@ -277,7 +292,7 @@ web/
     pages/
       index.astro        Landing page — hero, the problem, supported sources, three access methods (HTTP API, CLI, MCP), source code
       ingest.astro       Ingest page — Ingestor island + supported sources + output formats
-      docs.astro         API documentation — endpoints, response formats, error codes, frontmatter fields, CLI usage, MCP server config + tools
+      docs.astro         API documentation — endpoints, response formats, error codes (incl. RATE_LIMITED), frontmatter fields, CLI usage, MCP server config + tools, /ingest link
     styles/
       global.css         Design tokens, base styles, shared components (.btn, .provider-icon, .terminal)
 ```
@@ -305,7 +320,7 @@ web/
 | `--bg-elevated` | `oklch(23% 0.02 260)` | Button background |
 | `--ink` | `oklch(95% 0.01 260)` | Primary text |
 | `--ink-muted` | `oklch(65% 0.02 260)` | Secondary text (WCAG AA compliant) |
-| `--ink-dim` | `oklch(50% 0.02 260)` | Tertiary text (3.3:1 — below AA, use only for non-essential UI like line numbers) |
+| `--ink-dim` | `oklch(58% 0.02 260)` | Tertiary text (4.6:1 — AA compliant, non-essential UI like line numbers, placeholders, footer links) |
 | `--border` | `oklch(28% 0.02 260)` | Default border |
 | `--border-bright` | `oklch(35% 0.02 260)` | Hover border |
 | `--font-display` | Geist Variable | Display/headings |
@@ -480,6 +495,7 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 | CLI (`src/cli.ts`) | Runtime-verified | `bun run src/cli.ts <url>` → markdown to stdout; `--json` for `{metadata, markdown}`; `--provider` override |
 | MCP server (stdio) (`src/cli.ts mcp`) | Runtime-verified | `bun run src/cli.ts mcp` → stdio JSON-RPC; two tools: `ingest_article` (auto-detect, markdown default, `json: true` for structured) + `list_providers` (discover sources + example URLs) |
 | MCP server (HTTP) (`src/mcp.controller.ts`) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; initialize handshake returns session ID; `tools/list` returns both tools; `ingest_article` with real URL → markdown text, `isError: false`; bad URL → `isError: true` with `[CODE] message`; `list_providers` → 3 providers with metadata + 42 Medium domains |
+| Rate limiting (`src/common/guards/rate-limit.guard.ts`) | Runtime-verified | Global `RateLimitGuard` via `APP_GUARD` — 30 req/min per IP; 31st request returns 429 `{ code: "RATE_LIMITED", message, details: { retryAfter }, traceId }`; `trustProxy: true` reads real IP from `x-forwarded-for` |
 
 HTTP API runs on Cloudflare Containers. A Worker (`src/worker.ts`) routes all requests
 to a NestJS + Bun Docker container. The Worker extends the `Container` class from

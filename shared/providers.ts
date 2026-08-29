@@ -129,6 +129,7 @@ export const ERROR_CODES: readonly ErrorCode[] = [
   { code: "SUBSTACK.PARSE_FAILED", http: "502", when: "Article data parsing failed" },
   { code: "INTERNAL.ERROR", http: "500", when: "Unexpected error" },
   { code: "NOT_FOUND", http: "404", when: "Unknown route" },
+  { code: "RATE_LIMITED", http: "429", when: "Too many requests (30/min per IP)" },
 ] as const;
 
 // ── Frontmatter fields (docs.astro) ─────────────────────────────
