@@ -295,7 +295,7 @@ exists — the content is gated server-side.
 | Body format | **HTML** (needs conversion) | Markdown (native) | Markdown (via Freedium) |
 | New dependency needed | **Yes** (`turndown`) | No | No |
 | Custom component handling | **Yes** (8+ Substack-specific) | Yes (liquid tags) | Yes (`<picture>` tags) |
-| Tables | **Not supported** | Yes (pipe tables) | Yes (via Freedium) |
+| Tables | **Not supported** | Yes (pipe tables) | **Unverified** (Freedium renderer source shows no TABLE type; Medium data model has no tables) |
 | Footnotes | Yes (custom HTML) | Yes (Redcarpet) | No |
 | LaTeX/math | Yes (MathJax, custom HTML) | Yes (KaTeX liquid tag) | No |
 | Retries needed | No | No | Yes (up to 5) |

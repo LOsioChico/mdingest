@@ -220,6 +220,17 @@ export class DevtoService implements Provider {
 
   // --- Metadata ---
 
+  /** Decode common HTML entities in API text fields (description may contain &nbsp; etc). */
+  private decodeHtmlEntities(s: string): string {
+    return s
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+  }
+
   private buildMetadata(article: DevtoArticleResponse, fallbackUrl: string): ArticleMetadata {
     const tags = article.tag_list
       ? article.tag_list.split(",").map((t) => t.trim()).filter(Boolean)
@@ -227,7 +238,7 @@ export class DevtoService implements Provider {
 
     return {
       title: article.title,
-      subtitle: article.description || undefined,
+      subtitle: this.decodeHtmlEntities(article.description) || undefined,
       author: article.user.name,
       published: article.published_timestamp,
       date: article.published_timestamp,
