@@ -299,7 +299,7 @@ exists — the content is gated server-side.
 | Footnotes | Yes (custom HTML) | Yes (Redcarpet) | No |
 | LaTeX/math | Yes (MathJax, custom HTML) | Yes (KaTeX liquid tag) | No |
 | Retries needed | No | No | Yes (up to 5) |
-| Content completeness | Free posts: full. Paid: truncated | Full | Full (paywall bypassed) |
+| Content completeness | Free posts: full. Paid: truncated | Full | Full (via Freedium) |
 
 Substack is the **most complex** provider: HTML conversion + 8+ custom
 component handlers + no tables + limited to free posts only. Dev.to remains

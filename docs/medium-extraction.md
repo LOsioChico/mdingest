@@ -1,4 +1,4 @@
-# Medium extraction — Freedium paywall bypass + dual-source metadata
+# Medium extraction — Freedium + dual-source metadata
 
 > Centralized reference for the Medium provider. Documents the Freedium
 > dependency, dual-source data flow, content fidelity, and known limitations.
@@ -326,7 +326,7 @@ Full coverage matrix: [`docs/markdown-coverage-matrix.md`](markdown-coverage-mat
 
 ## References
 
-- [Freedium source code](https://codeberg.org/Freedium-cfd/web) — paywall bypass service
+- [Freedium source code](https://codeberg.org/Freedium-cfd/web) — Medium article fetcher
 - [Freedium GitHub mirror](https://github.com/Freedium-cfd/web) — includes `renderer.py`
 - Freedium renderer: `freedium-library/src/freedium_library/services/medium/renderer.py`
 - Our service: `src/modules/medium/medium.service.ts`

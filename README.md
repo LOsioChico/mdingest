@@ -6,9 +6,7 @@
 [![Last Commit](https://img.shields.io/github/last-commit/LOsioChico/mdingest?style=flat-square)](https://github.com/LOsioChico/mdingest/commits)
 
 API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
-
-Currently supports **Medium** (via [Freedium](https://codeberg.org/Freedium-cfd/web) paywall bypass), **Dev.to** (via Forem API), and **Substack** (free posts via public API + HTML→Markdown).
-Designed for future providers.
+Supports **Medium** (via [Freedium](https://codeberg.org/Freedium-cfd/web)), **Dev.to** (Forem API), and **Substack** (free posts via public API + HTML→Markdown).
 
 ## Quick start
 
@@ -19,8 +17,6 @@ bun run dev
 
 ## Usage
 
-### Live API
-
 Deployed at `https://mdingest.knightker.workers.dev`:
 
 ```bash
@@ -29,32 +25,21 @@ curl "https://mdingest.knightker.workers.dev/v1/devto?url=https://dev.to/user/ar
 curl "https://mdingest.knightker.workers.dev/v1/substack?url=https://pub.substack.com/p/article-slug"
 ```
 
-### Local development
-
-```bash
-bun run dev
-curl "http://localhost:3000/v1/medium?url=https://medium.com/@user/article-id"
-curl "http://localhost:3000/v1/devto?url=https://dev.to/user/article-slug"
-curl "http://localhost:3000/v1/substack?url=https://pub.substack.com/p/article-slug"
-```
+Add `&format=json` for `{ metadata, markdown }` JSON response instead of raw markdown.
 
 Returns `text/markdown` with YAML frontmatter + clean body:
 
 ```markdown
 ---
 title: "Article Title"
-subtitle: "Article subtitle"
 author: "Author Name"
 date: "2026-01-15"
-published: "2026-01-15"
-updated: "2026-01-20"
 reading_time: "5 min read"
 free: true
 source_url: "https://medium.com/@user/article-id"
 provider: "medium"
 tags:
   - "Distributed Systems"
-  - "System Design"
 ---
 
 # Article content in clean Markdown...
@@ -72,19 +57,39 @@ Returns `application/json`:
 {
   "metadata": {
     "title": "Article Title",
-    "subtitle": "Article subtitle",
     "author": "Author Name",
     "date": "2026-01-15",
-    "published": "2026-01-15",
-    "updated": "2026-01-20",
     "reading_time": "5 min read",
     "free": true,
     "source_url": "https://medium.com/@user/article-id",
     "provider": "medium",
-    "tags": ["Distributed Systems", "System Design"]
+    "tags": ["Distributed Systems"]
   },
   "markdown": "---\ntitle: \"Article Title\"...\n"
 }
+```
+
+```markdown
+---
+title: "Article Title"
+author: "Author Name"
+date: "2026-01-15"
+reading_time: "5 min read"
+free: true
+source_url: "https://medium.com/@user/article-id"
+provider: "medium"
+tags:
+  - "Distributed Systems"
+---
+
+# Article content in clean Markdown...
+```
+
+### Local development
+
+```bash
+bun run dev
+curl "http://localhost:3000/v1/medium?url=https://medium.com/@user/article-id"
 ```
 
 ## Configuration
@@ -95,8 +100,8 @@ Returns `application/json`:
 | `FREEDIUM_BASE_URL` | `https://freedium-mirror.cfd` | Freedium mirror base URL |
 | `CACHE_TTL_SECONDS` | `300` | Cache entry TTL (seconds) |
 | `CACHE_MAX_ENTRIES` | `200` | Max cache entries |
-| `FETCH_TIMEOUT_MS` | `20000` | Freedium fetch timeout (ms) |
-| `USER_AGENT` | Chrome 120 UA | User-Agent for Freedium requests |
+| `FETCH_TIMEOUT_MS` | `20000` | Fetch timeout (ms) |
+| `USER_AGENT` | Chrome 120 UA | User-Agent for upstream requests |
 
 ## Architecture
 
@@ -120,60 +125,21 @@ src/
   worker.ts         Cloudflare Worker — routes requests to the Docker container
 ```
 
-**6-bucket layout** (following NestJS dev guidelines):
-- `core/` — app-wide infrastructure
-- `integrations/` — external service clients (thin wrappers)
-- `common/` — generic, domain-less utilities (types, pipes, filters)
-- `modules/` — business features (own controllers, services, DTOs, errors)
+Each provider implements a `Provider` interface (`matches`, `convert`). Adding a provider = new folder under `modules/`, no changes to core or common. Service classes work with direct `new` outside NestJS, enabling future CLI and MCP entry points without duplication.
 
-**Dual-source approach:** Medium articles are fetched from two Freedium endpoints:
-1. `/api/download?url=...` — finished markdown with tags, pipe tables, code languages, inline images as `<picture>` HTML
-2. `/<url>/__data.json` — SvelteKit data with author, reading time, and cover image URL
-
-The download endpoint gives us 90% of the content. We enrich it with author, reading time,
-and cover image from the data endpoint. We also replace `<picture>` HTML tags with clean
-markdown image syntax. The download endpoint retries up to 5 times if Freedium's renderer
-returns `[Embedded content]` placeholders instead of rendered tables (~20% failure rate).
-
-Tags and pipe tables are not recoverable from any other source (Medium's GraphQL API is
-Cloudflare-blocked without auth).
-
-**Accepted domains:** 42 Medium domains sourced from Freedium's `KNOWN_MEDIUM_DOMAINS` +
-`KNOWN_MEDIUM_CUSTOM_DOMAINS`. Includes `medium.com`, `*.medium.com`, and publication
-custom domains (`itnext.io`, `levelup.gitconnected.com`, `betterprogramming.pub`, etc.).
-
-**Provider pattern:** Each content source implements the `Provider` interface.
-Adding a new provider only requires a new folder under `modules/`
-— no changes to core or common modules.
-
-**Multi-entry-point:** Service classes use `@Injectable()` (NestJS DI metadata) but
-work with direct `new` instantiation — no NestJS boot required. This enables three
-entry points sharing the same conversion logic: HTTP API (current), CLI (planned),
-MCP server (planned).
-
-**Error contract:** All errors return `{ code, message, details?, traceId }` with
-namespaced codes (`VALIDATION.FAILED`, `MEDIUM.INVALID_URL`, `MEDIUM.FREEDIUM_UNAVAILABLE`,
-`MEDIUM.PARSE_FAILED`, `DEVTO.INVALID_URL`, `DEVTO.UNAVAILABLE`, `DEVTO.PARSE_FAILED`,
-`SUBSTACK.INVALID_URL`, `SUBSTACK.PAID_POST`, `SUBSTACK.UNAVAILABLE`, `SUBSTACK.PARSE_FAILED`,
-`INTERNAL.ERROR`).
+Errors return `{ code, message, details?, traceId }` with namespaced codes (`MEDIUM.INVALID_URL`, `SUBSTACK.PAID_POST`, `VALIDATION.FAILED`, etc.). Full contract in [`AGENTS.md`](AGENTS.md).
 
 ## Tech stack
 
-- **Runtime:** Bun
-- **Framework:** NestJS + Fastify
-- **Validation:** Zod
-- **Caching:** lru-cache (in-memory)
-- **HTML→Markdown:** turndown (Substack provider)
-- **Linting:** oxlint
-- **Deployment:** Cloudflare Containers
-
-## Attribution
-
-This project depends on [Freedium](https://codeberg.org/Freedium-cfd/web) for Medium
-paywall bypass. Freedium is an open-source service that fetches Medium articles via
-their GraphQL API and renders them as accessible HTML and downloadable Markdown.
-We use two Freedium endpoints: `/api/download` (finished markdown) and `__data.json`
-(SvelteKit SSR data with metadata).
+| Tool | Role |
+|---|---|
+| Bun | Runtime |
+| NestJS + Fastify | Framework (modules, DI, controllers) |
+| Zod | Runtime validation (config, params, metadata) |
+| lru-cache | In-memory cache with TTL |
+| turndown | HTML→Markdown (Substack provider) |
+| oxlint | Linting |
+| @cloudflare/containers | Cloudflare Containers deployment |
 
 ## Roadmap
 
@@ -190,8 +156,10 @@ We use two Freedium endpoints: `/api/download` (finished markdown) and `__data.j
 
 ```bash
 bun run verify    # typecheck + lint
-bun run typecheck # tsc --noEmit only
-bun run lint      # oxlint only
 bun run dev       # start dev server with hot reload
-bun run start     # start server (no hot reload)
+bun run test      # run unit tests
 ```
+
+## Attribution
+
+Medium articles fetched via [Freedium](https://codeberg.org/Freedium-cfd/web).

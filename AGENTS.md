@@ -1,7 +1,7 @@
 # AGENTS.md — mdingest Operating Contract
 
 > API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
-> Currently supports Medium (via Freedium paywall bypass), Dev.to (via Forem API),
+> Currently supports Medium (via Freedium), Dev.to (via Forem API),
 > and Substack (free posts via public API + HTML→Markdown).
 > Designed for future providers.
 
@@ -35,7 +35,7 @@ Read this file before writing code.
 ## What this project is
 
 An API that converts blog/article/newsletter pages to clean Markdown for LLM ingestion.
-Medium articles are fetched via Freedium mirror (paywall bypass) using a dual-source
+Medium articles are fetched via Freedium mirror using a dual-source
 approach: the download endpoint for finished markdown + the `__data.json` endpoint for
 metadata (author, reading_time, cover image). Output includes YAML frontmatter with rich metadata.
 
@@ -259,7 +259,7 @@ Zod-validated env vars with hardcoded defaults. No config files — invalid env 
 
 | Provider | Source | Notes |
 |---|---|---|
-| Medium | [Freedium](https://codeberg.org/Freedium-cfd/web) | Open-source paywall bypass. Two endpoints: `/api/download` (markdown) + `__data.json` (metadata). |
+| Medium | [Freedium](https://codeberg.org/Freedium-cfd/web) | Open-source Medium article fetcher. Two endpoints: `/api/download` (markdown) + `__data.json` (metadata). |
 | Dev.to | [Forem API](https://developers.forem.com/api) | Public, unauthenticated. `GET /api/articles/{username}/{slug}` returns native markdown + metadata. |
 | Substack | Substack public API | `GET https://{domain}/api/v1/posts/{slug}`. Free posts only — paid posts are server-side truncated. |
 
@@ -286,4 +286,4 @@ Files: `src/worker.ts` + `Dockerfile` + `wrangler.toml`.
 
 ## References
 
-- [Freedium source code](https://codeberg.org/Freedium-cfd/web) — paywall bypass reference
+- [Freedium source code](https://codeberg.org/Freedium-cfd/web) — Medium article fetcher

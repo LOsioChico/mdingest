@@ -17,7 +17,7 @@ import { config } from "../../core/config/config.ts";
  *    - eager.markdown: raw markdown body (unused — download endpoint has richer version)
  *
  * Attribution: Freedium (https://codeberg.org/Freedium-cfd/web)
- * is the paywall bypass service this project depends on.
+ * is the Medium article fetcher this project depends on.
  */
 
 export interface FreediumMarkdownResponse {
@@ -145,7 +145,7 @@ export class FreediumService {
     }
 
     // SvelteKit streaming format: error field present when article fetch failed
-    // (404, paywall bypass failure, etc.) — check before accessing article
+    // (404, fetch failure, etc.) — check before accessing article
     const eagerError = this.resolveRef(eager.error, nodeData) as
       | Record<string, unknown>
       | undefined;

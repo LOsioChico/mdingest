@@ -135,7 +135,7 @@ component handlers for Substack-specific HTML structures.
 | Cover image injection | Yes (from `__data.json`) | Yes (from `cover_image` field) | Yes (from post metadata) |
 | Retry logic | Yes (5x for placeholder issue) | No | No |
 | Dual-source merge | Yes (download + `__data.json`) | No (single endpoint) | No (single endpoint) |
-| Paywall handling | Bypassed (Freedium) | None | Free posts only (hard paywall) |
+| Paywall handling | Fetched via Freedium | None | Free posts only (hard paywall) |
 
 ## Unverified claims
 
