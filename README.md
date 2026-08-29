@@ -179,9 +179,10 @@ We use two Freedium endpoints: `/api/download` (finished markdown) and `__data.j
 
 | Feature | Status | How |
 |---|---|---|
-| HTTP API | Deployed | `https://mdingest.knightker.workers.dev/v1/medium?url=...` — Cloudflare Containers |
-| Dev.to provider | Implemented | `GET /v1/devto?url=...` — Forem API, liquid tag transform, 38 unit tests |
-| Substack provider | Implemented | `GET /v1/substack?url=...` — public API + turndown HTML→Markdown, free posts only, 32 unit tests |
+| HTTP API | Deployed — runtime-verified | `https://mdingest.knightker.workers.dev/v1/medium?url=...` — Cloudflare Containers |
+| Medium provider | Runtime-verified | `GET /v1/medium?url=...` — Freedium dual-source, 28 unit tests |
+| Dev.to provider | Runtime-verified | `GET /v1/devto?url=...` — Forem API, liquid tag transform, 38 unit tests |
+| Substack provider | Runtime-verified | `GET /v1/substack?url=...` — public API + turndown HTML→Markdown, free posts only, 32 unit tests |
 | CLI | Planned | `bun run src/cli.ts <url>` — direct `new` services, print markdown |
 | MCP server | Planned | Expose `convert_article` tool — same services, `@modelcontextprotocol/sdk` |
 

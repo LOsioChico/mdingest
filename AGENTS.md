@@ -275,8 +275,12 @@ HTTP API runs on Cloudflare Containers. A Worker (`src/worker.ts`) routes all re
 to a NestJS + Bun Docker container. The Worker extends the `Container` class from
 `@cloudflare/containers` with `defaultPort = 3000` (matching the Dockerfile's EXPOSE).
 
-Deploy: `bun x wrangler deploy` — builds the Docker image, pushes to Cloudflare registry,
-and deploys the Worker in one command.
+Deploy: `bun x wrangler deploy --containers-rollout=immediate` — builds the Docker image,
+pushes to Cloudflare registry, and deploys the Worker with an immediate rollout (100% of
+instances updated at once). The default rolling strategy (10% then 90%) can leave stale
+instances serving requests during the transition — `immediate` avoids that.
+
+After deploy, verify the live endpoint (G2): `curl -s -w "\nHTTP %{http_code}\n" "https://mdingest.knightker.workers.dev/v1/medium?url=<real-url>"`. First request after deploy may take ~15s (cold start).
 
 Files: `src/worker.ts` + `Dockerfile` + `wrangler.toml`.
 
