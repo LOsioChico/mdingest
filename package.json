@@ -1,7 +1,7 @@
 {
   "name": "mdingest",
   "version": "0.0.1",
-  "description": "API that converts blog/article/newsletter pages (Medium, Substack, Dev.to, etc.) to clean Markdown for LLM ingestion",
+  "description": "Ingest blog/article/newsletter pages (Medium, Dev.to, Substack) to clean Markdown for LLMs. HTTP API, CLI, and MCP server.",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -12,14 +12,18 @@
   "keywords": [
     "markdown",
     "medium",
+    "substack",
+    "devto",
     "llm",
+    "rag",
     "ingestion",
     "freedium",
     "content-extraction",
     "nestjs",
     "bun",
     "cloudflare-containers",
-    "mcp"
+    "mcp",
+    "cli"
   ],
   "homepage": "https://mdingest.knightker.workers.dev",
   "repository": {
