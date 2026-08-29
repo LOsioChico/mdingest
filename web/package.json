@@ -15,7 +15,6 @@
     "@lucide/astro": "1.33.0",
     "astro": "7.2.9",
     "lucide-react": "1.33.0",
-    "motion": "13.1.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

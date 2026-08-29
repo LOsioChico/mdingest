@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, Copy, Check, Download, AlertCircle, ArrowRight, ChevronRight } from 'lucide-react';
 import { PROVIDERS, detectProvider, type ProviderId } from '@shared/providers.ts';
 
@@ -27,8 +26,6 @@ interface ApiError {
   details?: Array<{ path: string; message: string }>;
 }
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-
 const ERROR_MESSAGES: Record<string, string> = {
   'VALIDATION.FAILED': 'That URL doesn\'t match the expected format.',
   'SUBSTACK.PAID_POST': 'This post is behind a paywall. Only free posts can be ingested.',
@@ -52,29 +49,58 @@ export default function Ingestor() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [format, setFormat] = useState<Format>('md');
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [resultVisible, setResultVisible] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // Fade-in error when set — defer to next frame so browser sees opacity:0 first
+  useEffect(() => {
+    if (error) {
+      const id = requestAnimationFrame(() => setErrorVisible(true));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [error]);
+
+  // Fade-in result when set — defer to next frame so browser sees opacity:0 first
+  useEffect(() => {
+    if (result) {
+      const id = requestAnimationFrame(() => setResultVisible(true));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [result]);
+
+  const dismissError = useCallback(() => {
+    setErrorVisible(false);
+    setTimeout(() => setError(null), 200);
+  }, []);
+
+  const dismissResult = useCallback(() => {
+    setResultVisible(false);
+    setTimeout(() => setResult(null), 200);
+  }, []);
+
   const handleUrlChange = useCallback((value: string) => {
     setUrl(value);
     const detected = detectProvider(value);
     if (detected) setProvider(detected);
-    setError(null);
-  }, []);
+    if (error) dismissError();
+  }, [error, dismissError]);
 
   const handleIngest = useCallback(async () => {
     if (!url.trim()) return;
     if (!/^https?:\/\//.test(url.trim())) {
+      if (result) dismissResult();
       setError('URL must start with https://');
       return;
     }
 
     setLoading(true);
-    setError(null);
-    setResult(null);
+    if (error) dismissError();
+    if (result) dismissResult();
 
     try {
       const res = await fetch(`/v1/${provider}?url=${encodeURIComponent(url.trim())}&format=json`);
@@ -173,30 +199,16 @@ export default function Ingestor() {
         <span className="ingestor-hint">auto-detected from URL</span>
       </div>
 
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            className="ingestor-error"
-            initial={{ opacity: 0, transform: 'translateY(4px)' }}
-            animate={{ opacity: 1, transform: 'translateY(0)' }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: EASE_OUT }}
-          >
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {error && (
+        <div className={`ingestor-error ${errorVisible ? 'visible' : ''}`}>
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
 
-      <AnimatePresence>
-        {result && (
-          <motion.div
-            className="ingestor-result"
-            initial={{ opacity: 0, transform: 'translateY(4px)' }}
-            animate={{ opacity: 1, transform: 'translateY(0)' }}
-            transition={{ duration: 0.2, ease: EASE_OUT }}
-          >
-            <div className="ingestor-metadata">
+      {result && (
+        <div className={`ingestor-result ${resultVisible ? 'visible' : ''}`}>
+          <div className="ingestor-metadata">
               {result.metadata.title && <span className="meta-title">{result.metadata.title}</span>}
               <div className="meta-items">
                 {result.metadata.author && <span className="meta-item">{result.metadata.author}</span>}
@@ -246,9 +258,8 @@ export default function Ingestor() {
                 ))}
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       <style>{`
         .ingestor {
@@ -283,6 +294,10 @@ export default function Ingestor() {
         .ingestor-submit {
           flex-shrink: 0;
           padding: var(--space-3) var(--space-4);
+          transition: opacity var(--duration-fast) var(--ease-out);
+        }
+        .ingestor-submit:disabled {
+          opacity: 0.7;
         }
         .ingestor-provider-row {
           display: flex;
@@ -341,10 +356,16 @@ export default function Ingestor() {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
         .ingestor-error {
           display: flex;
           align-items: center;
           gap: var(--space-2);
+          opacity: 0;
+          transform: translateY(8px);
+          transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-out);
           color: var(--error);
           font-size: var(--text-sm);
           padding: var(--space-3);
@@ -353,8 +374,19 @@ export default function Ingestor() {
           border-radius: var(--radius-sm);
           margin-top: var(--space-3);
         }
+        .ingestor-error.visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
         .ingestor-result {
           margin-top: var(--space-6);
+          opacity: 0;
+          transform: translateY(8px);
+          transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+        }
+        .ingestor-result.visible {
+          opacity: 1;
+          transform: translateY(0);
         }
         .ingestor-metadata {
           display: flex;
@@ -443,6 +475,7 @@ export default function Ingestor() {
           border-color: var(--border-bright);
           color: var(--ink);
         }
+        .output-action:active { transform: scale(0.97); }
         .output-terminal-body {
           max-height: 500px;
           overflow: auto;
