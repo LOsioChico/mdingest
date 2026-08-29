@@ -5,6 +5,7 @@
     "suspicious": "warn",
     "perf": "warn"
   },
+  "ignorePatterns": ["web/.astro/**"],
   "rules": {
     "no-console": "off",
     "no-unused-vars": "error",
