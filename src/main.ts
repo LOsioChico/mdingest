@@ -30,6 +30,7 @@ async function bootstrap(): Promise<void> {
   });
 
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.enableShutdownHooks();
 
   await app.listen(config.port, "0.0.0.0");
 

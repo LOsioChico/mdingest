@@ -10,6 +10,8 @@ class_name = "MdingestContainer"
 image = "./Dockerfile"
 max_instances = 1
 instance_type = "basic"
+rollout_step_percentage = 100
+rollout_active_grace_period = 0
 
 [[durable_objects.bindings]]
 name = "MDINGEST_CONTAINER"

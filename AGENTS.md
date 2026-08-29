@@ -276,12 +276,18 @@ HTTP API runs on Cloudflare Containers. A Worker (`src/worker.ts`) routes all re
 to a NestJS + Bun Docker container. The Worker extends the `Container` class from
 `@cloudflare/containers` with `defaultPort = 3000` (matching the Dockerfile's EXPOSE).
 
-Deploy: `bun x wrangler deploy --containers-rollout=immediate` — builds the Docker image,
-pushes to Cloudflare registry, and deploys the Worker with an immediate rollout (100% of
-instances updated at once). The default rolling strategy (10% then 90%) can leave stale
-instances serving requests during the transition — `immediate` avoids that.
+Deploy: `bun x wrangler deploy` — builds the Docker image, pushes to Cloudflare registry,
+and deploys the Worker. Instant rollout is configured via two mechanisms:
 
-After deploy, verify the live endpoint (G2): `curl -s -w "\nHTTP %{http_code}\n" "https://mdingest.knightker.workers.dev/v1/medium?url=<real-url>"`. First request after deploy may take ~15s (cold start).
+1. `wrangler.toml`: `rollout_step_percentage = 100` + `rollout_active_grace_period = 0`
+   — all instances eligible for update immediately, 100% in one step.
+2. `main.ts`: `app.enableShutdownHooks()` — NestJS exits on SIGTERM instead of hanging,
+   so the old container stops in seconds (not the 15-minute SIGKILL timeout).
+
+Without `enableShutdownHooks()`, the old container keeps serving stale code for up to
+15 minutes after deploy because NestJS intercepts SIGTERM without exiting.
+
+After deploy, verify the live endpoint (G2): `curl -s -w "\nHTTP %{http_code}\n" "https://mdingest.knightker.workers.dev/v1/medium?url=<real-url>"`. New code is live within ~20s of deploy.
 
 Files: `src/worker.ts` + `Dockerfile` + `wrangler.toml`.
 
