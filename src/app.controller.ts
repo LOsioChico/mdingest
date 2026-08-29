@@ -1,4 +1,4 @@
-import { Controller, Get, VERSION_NEUTRAL, Version } from "@nestjs/common";
+import { Controller, Get, Version } from "@nestjs/common";
 import pkg from "../package.json" with { type: "json" };
 
 const API_VERSION = "1";
@@ -29,7 +29,7 @@ const apiInfo: ApiInfo = {
 @Controller()
 export class AppController {
   @Get()
-  @Version([API_VERSION, VERSION_NEUTRAL])
+  @Version(API_VERSION)
   info(): ApiInfo {
     return apiInfo;
   }
