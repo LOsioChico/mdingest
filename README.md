@@ -238,7 +238,6 @@ Errors return `{ code, message, details?, traceId }` with namespaced codes (`MED
 | Astro | Static site generator with React island support |
 | @astrojs/sitemap | Sitemap generation (sitemap-index.xml + sitemap-0.xml) |
 | React | Interactive islands (Ingestor component) |
-| motion | Enter/exit animations |
 | lucide-react + @lucide/astro | Icons |
 | Geist + Geist Mono | Self-hosted fonts |
 

@@ -411,7 +411,7 @@ Additional LLM visibility features:
 - `llms-full.txt` — all 3 pages concatenated for single-fetch ingestion (3-4x more traffic than `llms.txt` per Mintlify CDN analysis)
 - `<link rel="alternate" type="text/markdown">` in HTML `<head>` (Base.astro)
 - `Vary: Accept` on all web responses
-- FAQ section on landing page (7 Q&A pairs in `<details>`/`<summary>` — text in DOM regardless of collapse state)
+- FAQ section on landing page (7 Q&A pairs in JS-controlled accordion — single-open, smooth height via `grid-template-rows: 0fr→1fr`, text in DOM regardless of collapse state)
 - Freshness signal: "Last updated: 2026-08-29" in footer
 - `@astrojs/sitemap` generates `sitemap-index.xml` + `sitemap-0.xml` at build time
 - `.well-known/ai-catalog.json` — AI Catalog for domain-level agent discovery (links to MCP Server Card)
@@ -449,8 +449,7 @@ Additional LLM visibility features:
 | `astro` | Static site generator with React island support | Next.js is heavier. Astro gives zero-JS by default with selective hydration. 7.2.9. |
 | `@astrojs/react` | React integration for Astro islands | Required for `Ingestor.tsx` (client:load). 6.0.4. |
 | `@astrojs/sitemap` | Sitemap generation for search engines + AI crawlers | Generates `sitemap-index.xml` + `sitemap-0.xml` at build time. Referenced from `robots.txt`. Required `site` config option for absolute URLs. 3.7.3. |
-| `react` + `react-dom` | UI library for interactive islands | Needed for the Ingestor component (state, effects, animations). 19.2.8. |
-| `motion` | Animation library (framer-motion successor) | Used for enter/exit animations on results and errors. 13.1.1. |
+| `react` + `react-dom` | UI library for interactive islands | Needed for the Ingestor component (state, effects). 19.2.8. |
 | `lucide-react` | Icon library (React) | Used in Ingestor for Copy, Download, AlertCircle, etc. 1.33.0. |
 | `@lucide/astro` | Icon library (Astro) | Used in static pages for ChevronRight, ArrowRight, LockOpen, Broom, Braces, Database, FileInput, BookOpen, Star, Heart, GitHub icon. 1.33.0. |
 | `@fontsource-variable/geist` + `geist-mono` | Font loading | Geist (body) + Geist Mono (code/buttons/labels). Self-hosted, no Google Fonts. |
@@ -467,6 +466,7 @@ Additional LLM visibility features:
 | `html-to-md` | No custom rule API — only supports `renderCustomTags: 'SKIP'`. Can't transform Substack's custom components (footnotes→`[^N]`, LaTeX→`$$...$$`, etc.). |
 | `node-html-markdown` | `customTranslators` is less flexible than turndown's `addRule(filter, replacement)`. Larger dependency tree (`node-html-parser`). |
 | `tailwindcss` | Project uses CSS custom properties (design tokens in `global.css`). Tailwind would add build complexity for a 3-page site. |
+| `motion` (framer-motion) | Removed — was 37 KB gzipped for 2 fade-ins. Replaced with CSS `opacity` + `transform` transitions + `requestAnimationFrame` for enter/exit. FAQ accordion uses `grid-template-rows: 0fr→1fr` + vanilla JS for single-open behavior. |
 
 ## Engineering discipline
 
