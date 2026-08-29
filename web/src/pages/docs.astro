@@ -2,13 +2,14 @@
 import Base from '../layouts/Base.astro';
 import { BASE_URL, PROVIDERS, ERROR_CODES, FRONTMATTER_FIELDS } from '@shared/providers.ts';
 ---
-<Base title="API Docs — mdingest" description="mdingest API reference: endpoints, parameters, response formats, and error codes">
+<Base title="API Docs: mdingest" description="mdingest API reference: endpoints, parameters, response formats, and error codes">
+
   <section class="section container docs">
     <p class="eyebrow">reference</p>
     <h1>API Docs</h1>
 
     <h2>Base URL</h2>
-    <div class="terminal">
+    <div class="terminal" data-copy-content={BASE_URL}>
       <div class="terminal-header">
         <span class="terminal-dots">
           <span class="terminal-dot"></span>
@@ -16,6 +17,7 @@ import { BASE_URL, PROVIDERS, ERROR_CODES, FRONTMATTER_FIELDS } from '@shared/pr
           <span class="terminal-dot"></span>
         </span>
         <span class="terminal-title">base</span>
+        <button class="terminal-copy" type="button">Copy</button>
       </div>
       <div class="terminal-body">
         <pre>{BASE_URL}</pre>
@@ -23,36 +25,47 @@ import { BASE_URL, PROVIDERS, ERROR_CODES, FRONTMATTER_FIELDS } from '@shared/pr
     </div>
 
     <h2>Endpoints</h2>
-    {PROVIDERS.map((p) => (
-      <div class="endpoint">
-        <div class="endpoint-head">
-          <span class="endpoint-method">GET</span>
-          <code class="endpoint-path">{p.path}</code>
-        </div>
-        <table class="table">
-          <thead>
-            <tr><th>Param</th><th>Required</th><th>Type</th><th>Description</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><code>url</code></td><td>yes</td><td>string</td><td>Article URL to ingest</td></tr>
-            <tr><td><code>format</code></td><td>no</td><td><code>markdown</code> | <code>json</code></td><td>Response format (default: markdown)</td></tr>
-          </tbody>
-        </table>
-        <div class="terminal">
-          <div class="terminal-header">
-            <span class="terminal-dots">
-              <span class="terminal-dot"></span>
-              <span class="terminal-dot"></span>
-              <span class="terminal-dot"></span>
-            </span>
-            <span class="terminal-title">curl</span>
+    <p>All endpoints share the same query parameters:</p>
+    <table class="table">
+      <thead>
+        <tr><th>Param</th><th>Required</th><th>Type</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>url</code></td><td>yes</td><td>string</td><td>Article URL to ingest</td></tr>
+        <tr><td><code>format</code></td><td>no</td><td><code>markdown</code> | <code>json</code></td><td>Response format (default: markdown)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="endpoint-list">
+      {PROVIDERS.map((p) => (
+        <div class="endpoint-row">
+          <div class="endpoint-info">
+            <span class="endpoint-icon provider-icon" style={`--icon-url: url(${p.icon})`}></span>
+            <div class="endpoint-details">
+              <div class="endpoint-line">
+                <span class="endpoint-method">GET</span>
+                <code class="endpoint-path">{p.endpoint}</code>
+              </div>
+              <span class="endpoint-source">{p.label} via {p.source}</span>
+            </div>
           </div>
-          <div class="terminal-body">
-            <pre><span class="terminal-prompt">$</span> curl <span class="terminal-string">"{BASE_URL}{p.endpoint}?url=https://example.com/article"</span></pre>
+          <div class="terminal" data-copy-content={`curl "${BASE_URL}${p.endpoint}?url=${p.example}"`}>
+            <div class="terminal-header">
+              <span class="terminal-dots">
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+              </span>
+              <span class="terminal-title">curl</span>
+              <button class="terminal-copy" type="button">Copy</button>
+            </div>
+            <div class="terminal-body">
+              <pre><span class="terminal-prompt">$</span> curl <span class="terminal-string">"{BASE_URL}{p.endpoint}?url={p.example}"</span></pre>
+            </div>
           </div>
         </div>
-      </div>
-    ))}
+      ))}
+    </div>
 
     <h2>Response</h2>
     <p>When <code>format=markdown</code> (default), returns <code>text/markdown</code> with YAML frontmatter:</p>
@@ -94,6 +107,99 @@ Article body in clean Markdown...</span></pre>
       </tbody>
     </table>
 
+    <h2>CLI</h2>
+    <p>Same ingestion logic, from the terminal. Auto-detects provider from URL.</p>
+    <div class="terminal" data-copy-content={`bun run src/cli.ts https://dev.to/user/post > article.md`}>
+      <div class="terminal-header">
+        <span class="terminal-dots">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+        </span>
+        <span class="terminal-title">cli</span>
+        <button class="terminal-copy" type="button">Copy</button>
+      </div>
+      <div class="terminal-body">
+<pre><span class="terminal-prompt">$</span> bun run src/cli.ts https://dev.to/user/post > article.md
+
+<span class="terminal-comment"># JSON output (metadata + markdown)</span>
+<span class="terminal-prompt">$</span> bun run src/cli.ts https://dev.to/user/post --json
+
+<span class="terminal-comment"># Override provider auto-detection</span>
+<span class="terminal-prompt">$</span> bun run src/cli.ts https://example.com/post --provider medium
+
+<span class="terminal-comment"># List supported providers</span>
+<span class="terminal-prompt">$</span> bun run src/cli.ts providers</pre>
+      </div>
+    </div>
+
+    <h2>MCP server</h2>
+    <p>For AI tools (Claude, Cursor). Two ways to connect: remote (zero setup) or local (stdio).</p>
+
+    <h3>Remote (HTTP)</h3>
+    <p>Register the deployed endpoint directly. No local install needed:</p>
+    <div class="terminal" data-copy-content={`{ "url": "${BASE_URL}/v1/mcp" }`}>
+      <div class="terminal-header">
+        <span class="terminal-dots">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+        </span>
+        <span class="terminal-title">mcp config: remote</span>
+        <button class="terminal-copy" type="button">Copy</button>
+      </div>
+      <div class="terminal-body">
+<pre><span class="terminal-keyword">{`{
+  "mcpServers": {
+    "mdingest": {
+      "url": "${BASE_URL}/v1/mcp"
+    }
+  }
+}`}</span></pre>
+      </div>
+    </div>
+
+    <h3>Local (stdio)</h3>
+    <p>Run the CLI as a local process:</p>
+    <div class="terminal" data-copy-content={`bun run src/cli.ts mcp`}>
+      <div class="terminal-header">
+        <span class="terminal-dots">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+        </span>
+        <span class="terminal-title">mcp config: local</span>
+        <button class="terminal-copy" type="button">Copy</button>
+      </div>
+      <div class="terminal-body">
+<pre><span class="terminal-keyword">{`{
+  "mcpServers": {
+    "mdingest": {
+      "command": "bun",
+      "args": ["run", "src/cli.ts", "mcp"]
+    }
+  }
+}`}</span></pre>
+      </div>
+    </div>
+
+    <p>Both expose the same two tools:</p>
+    <table class="table">
+      <thead>
+        <tr><th>Tool</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ingest_article</code></td>
+          <td>Ingest a URL into clean Markdown. Auto-detects provider. Returns markdown text by default; <code>json: true</code> for <code>{'{ metadata, markdown }'}</code>.</td>
+        </tr>
+        <tr>
+          <td><code>list_providers</code></td>
+          <td>List supported providers with source, example URL, and accepted domains.</td>
+        </tr>
+      </tbody>
+    </table>
+
     <h2>Errors</h2>
     <p>All errors return <code>{`{ code, message, details?, traceId }`}</code>:</p>
     <table class="table">
@@ -113,12 +219,26 @@ Article body in clean Markdown...</span></pre>
 
     <h2>Provider notes</h2>
     <ul class="provider-notes">
-      <li><strong>Medium</strong> — Freedium mirror (dual-source: download for markdown, data endpoint for metadata). Full article access.</li>
-      <li><strong>Dev.to</strong> — Public Forem API. No restrictions. Returns native Markdown.</li>
-      <li><strong>Substack</strong> — Public Substack API. Posts not available for conversion return <code>SUBSTACK.PAID_POST</code> (403).</li>
+      <li><strong>Medium</strong>: Freedium mirror (dual-source: download for markdown, data endpoint for metadata). Full article access.</li>
+      <li><strong>Dev.to</strong>: Public Forem API. No restrictions. Returns native Markdown.</li>
+      <li><strong>Substack</strong>: Public Substack API. Posts not available for conversion return <code>SUBSTACK.PAID_POST</code> (403).</li>
     </ul>
   </section>
 </Base>
+
+<script>
+  document.querySelectorAll('.terminal[data-copy-content]').forEach((el) => {
+    const btn = el.querySelector('.terminal-copy');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const content = el.getAttribute('data-copy-content') ?? '';
+      navigator.clipboard.writeText(content);
+      const original = btn.textContent;
+      btn.textContent = 'copied';
+      setTimeout(() => { btn.textContent = original; }, 1200);
+    });
+  });
+</script>
 
 <style>
   .docs { max-width: var(--max-content); }
@@ -138,14 +258,39 @@ Article body in clean Markdown...</span></pre>
   .docs .terminal {
     margin: var(--space-3) 0;
   }
-  .endpoint {
-    margin-bottom: var(--space-8);
+  .endpoint-list {
+    margin-top: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
   }
-  .endpoint-head {
+  .endpoint-row {
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+  }
+  .endpoint-info {
     display: flex;
     align-items: center;
     gap: var(--space-3);
     margin-bottom: var(--space-3);
+  }
+  .endpoint-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+  .endpoint-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .endpoint-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
   }
   .endpoint-method {
     padding: 2px var(--space-2);
@@ -160,6 +305,13 @@ Article body in clean Markdown...</span></pre>
     font-family: var(--font-mono);
     font-size: var(--text-sm);
     color: var(--ink);
+  }
+  .endpoint-source {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+  }
+  .endpoint-row .terminal {
+    margin: 0;
   }
   .http-4 { color: oklch(80% 0.12 80); border-color: oklch(70% 0.12 80 / 30%); }
   .http-5 { color: oklch(75% 0.22 25); border-color: oklch(65% 0.22 25 / 30%); }

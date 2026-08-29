@@ -2,9 +2,13 @@
 import Base from '../layouts/Base.astro';
 import ArrowRight from '@lucide/astro/icons/arrow-right';
 import ChevronRight from '@lucide/astro/icons/chevron-right';
+import LockOpen from '@lucide/astro/icons/lock-open';
+import Broom from '@lucide/astro/icons/broom';
+import Braces from '@lucide/astro/icons/braces';
+import Database from '@lucide/astro/icons/database';
 import { PROVIDERS, BASE_URL, GITHUB_URL } from '@shared/providers.ts';
 ---
-<Base title="mdingest — Ingest articles to clean Markdown">
+<Base title="mdingest: Ingest articles to clean Markdown">
   <!-- Hero -->
   <section class="hero">
     <div class="container">
@@ -12,7 +16,7 @@ import { PROVIDERS, BASE_URL, GITHUB_URL } from '@shared/providers.ts';
       <h1>Articles to clean Markdown.<br /><span class="muted">For LLMs, RAG, or reading.</span></h1>
       <p class="lead">
         Paste a URL from Medium, Dev.to, or Substack. Get clean Markdown with
-        YAML frontmatter — title, author, dates, tags, cover image.
+        YAML frontmatter: title, author, dates, tags, cover image.
       </p>
       <div class="hero-cta-row">
         <a href="/ingest" class="btn btn-primary">
@@ -62,16 +66,28 @@ Full article body in clean Markdown...</span></pre>
     <div class="container">
       <p class="eyebrow">the problem</p>
       <h2>Web pages are noisy. LLMs need clean text.</h2>
-      <dl class="why-list">
-        <dt>No paywalls</dt>
-        <dd>Medium articles via Freedium mirror. Full content, not truncated previews.</dd>
-        <dt>No UI noise</dt>
-        <dd>Strips ads, nav, sidebars, popups, cookie banners. Just the article body.</dd>
-        <dt>Structured metadata</dt>
-        <dd>YAML frontmatter with title, author, dates, reading time, tags, cover image.</dd>
-        <dt>RAG-ready</dt>
-        <dd>Clean Markdown — drop it into your vector DB, LLM context, or CI.</dd>
-      </dl>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <LockOpen size={18} class="feature-icon" />
+          <h3>No paywalls</h3>
+          <p>Medium articles via Freedium mirror. Full content, not truncated previews.</p>
+        </div>
+        <div class="feature-card">
+          <Broom size={18} class="feature-icon" />
+          <h3>No UI noise</h3>
+          <p>Strips ads, nav, sidebars, popups, cookie banners. Just the article body.</p>
+        </div>
+        <div class="feature-card">
+          <Braces size={18} class="feature-icon" />
+          <h3>Structured metadata</h3>
+          <p>YAML frontmatter with title, author, dates, reading time, tags, cover image.</p>
+        </div>
+        <div class="feature-card">
+          <Database size={18} class="feature-icon" />
+          <h3>RAG-ready</h3>
+          <p>Clean Markdown. Drop it into your vector DB, LLM context, or CI.</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -94,6 +110,94 @@ Full article body in clean Markdown...</span></pre>
     </div>
   </section>
 
+  <!-- API access -->
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">api</p>
+      <h2>Three ways to ingest</h2>
+      <p class="lead">
+        Same logic, four entry points. HTTP API for your code,
+        CLI for your terminal, MCP for your AI tools.
+      </p>
+
+      <div class="access-list">
+        <div class="access-card">
+          <div class="access-card-head">
+            <h3>HTTP API</h3>
+            <span class="access-card-sub">for your code, RAG pipeline, or CI</span>
+          </div>
+          <div class="terminal" data-copy-content={`fetch("${BASE_URL}/v1/devto?url=https://dev.to/user/post")`}>
+            <div class="terminal-header">
+              <span class="terminal-dots">
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+              </span>
+              <span class="terminal-title">javascript</span>
+              <button class="terminal-copy" type="button">Copy</button>
+            </div>
+            <div class="terminal-body">
+<pre><span class="terminal-keyword">const</span> res = <span class="terminal-keyword">await</span> fetch(
+  <span class="terminal-string">"{BASE_URL}/v1/devto?url=https://dev.to/user/post"</span>
+);
+<span class="terminal-keyword">const</span>{' { metadata, markdown } = await res.json();'}</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="access-card">
+          <div class="access-card-head">
+            <h3>CLI</h3>
+            <span class="access-card-sub">pipe-friendly, markdown to stdout</span>
+          </div>
+          <div class="terminal" data-copy-content={`bun run src/cli.ts https://dev.to/user/post > article.md`}>
+            <div class="terminal-header">
+              <span class="terminal-dots">
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+              </span>
+              <span class="terminal-title">terminal</span>
+              <button class="terminal-copy" type="button">Copy</button>
+            </div>
+            <div class="terminal-body">
+<pre><span class="terminal-prompt">$</span> bun run src/cli.ts https://dev.to/user/post > article.md
+<span class="terminal-comment"># --json for {'{metadata, markdown}'}</span>
+<span class="terminal-comment"># --provider medium to override</span></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="access-card">
+          <div class="access-card-head">
+            <h3>MCP server</h3>
+            <span class="access-card-sub">for Claude, Cursor, and other AI tools</span>
+          </div>
+          <div class="terminal" data-copy-content={`{ "url": "${BASE_URL}/v1/mcp" }`}>
+            <div class="terminal-header">
+              <span class="terminal-dots">
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+              </span>
+              <span class="terminal-title">mcp</span>
+              <button class="terminal-copy" type="button">Copy</button>
+            </div>
+            <div class="terminal-body">
+<pre><span class="terminal-comment"># Remote (zero setup):</span>
+<span class="terminal-keyword">{`{ "url": "${BASE_URL}/v1/mcp" }`}</span>
+<span class="terminal-comment"># Tools: ingest_article, list_providers</span></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-link">
+        <a href="/docs">Read the API docs →</a>
+      </p>
+    </div>
+  </section>
+
   <!-- Source code -->
   <section class="section">
     <div class="container">
@@ -105,41 +209,6 @@ Full article body in clean Markdown...</span></pre>
       </p>
       <p class="section-link">
         <a href={GITHUB_URL} rel="noopener">github.com/LOsioChico/mdingest →</a>
-      </p>
-    </div>
-  </section>
-
-  <!-- API access -->
-  <section class="section">
-    <div class="container">
-      <p class="eyebrow">api</p>
-      <h2>It's an API too</h2>
-      <p class="lead">
-        Same endpoints power the web ingestor. Use it from your code,
-        your RAG pipeline, your CI.
-      </p>
-      <div class="terminal" data-copy-content={`fetch("${BASE_URL}/v1/devto?url=https://dev.to/user/post")`}>
-        <div class="terminal-header">
-          <span class="terminal-dots">
-            <span class="terminal-dot"></span>
-            <span class="terminal-dot"></span>
-            <span class="terminal-dot"></span>
-          </span>
-          <span class="terminal-title">javascript</span>
-          <button class="terminal-copy" type="button">Copy</button>
-        </div>
-        <div class="terminal-body">
-<pre><span class="terminal-keyword">const</span> res = <span class="terminal-keyword">await</span> fetch(
-  <span class="terminal-string">"{BASE_URL}/v1/devto?url=https://dev.to/user/post"</span>
-);
-<span class="terminal-keyword">const</span> {'{'} metadata, markdown {'}'} = <span class="terminal-keyword">await</span> res.json();
-
-metadata.title  <span class="terminal-comment">// "Building CLI Tools with Bun"</span>
-markdown.length <span class="terminal-comment">// 8421</span></pre>
-        </div>
-      </div>
-      <p class="section-link">
-        <a href="/docs">Read the API docs →</a>
       </p>
     </div>
   </section>
@@ -193,24 +262,37 @@ markdown.length <span class="terminal-comment">// 8421</span></pre>
     line-height: 1.7;
   }
 
-  .why-list {
-    margin-top: var(--space-6);
-    max-width: var(--max-prose);
+  .feature-grid {
+    margin-top: var(--space-8);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
   }
-  .why-list dt {
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    font-weight: 600;
+  .feature-card {
+    padding: var(--space-6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+  }
+  .feature-icon {
     color: var(--accent);
-    margin-top: var(--space-4);
+    margin-bottom: var(--space-3);
   }
-  .why-list dt:first-child { margin-top: 0; }
-  .why-list dd {
+  .feature-card h3 {
+    font-size: var(--text-sm);
+    font-family: var(--font-mono);
+    color: var(--ink);
+    margin-bottom: var(--space-2);
+  }
+  .feature-card p {
     font-size: var(--text-sm);
     color: var(--ink-muted);
     line-height: 1.5;
-    margin-top: var(--space-1);
-    margin-left: 0;
+    margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    .feature-grid { grid-template-columns: 1fr; }
   }
 
   .source-list {
@@ -263,6 +345,48 @@ markdown.length <span class="terminal-comment">// 8421</span></pre>
   }
   .section-link a {
     color: var(--accent);
+  }
+
+  .access-list {
+    margin-top: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  .access-card {
+    padding: var(--space-6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+  }
+  .access-card-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+  .access-card h3 {
+    font-size: var(--text-base);
+    font-family: var(--font-mono);
+    color: var(--accent);
+    margin: 0;
+  }
+  .access-card-sub {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+  }
+  .access-card p {
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+    margin-bottom: var(--space-4);
+    line-height: 1.5;
+  }
+  .access-card .terminal {
+    margin: 0;
+  }
+  .access-card .terminal-body pre {
+    font-size: var(--text-sm);
+    line-height: 1.7;
   }
 
   @media (max-width: 768px) {
