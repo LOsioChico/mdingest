@@ -13,7 +13,8 @@ Four entry points: **HTTP API**, **CLI**, **MCP server (stdio)**, and **MCP serv
 
 ```bash
 bun install
-bun run dev          # HTTP API + web UI on port 3000
+bun run build:web    # build web/dist once (static assets)
+bun run dev          # wrangler dev — API + web UI on :8787
 ```
 
 ## Usage
@@ -80,10 +81,10 @@ curl "https://mdingest.knightker.workers.dev/v1/medium?url=https://medium.com/@u
 
 ```bash
 bun run dev
-curl "http://localhost:3000/v1/medium?url=https://medium.com/@user/article-id"
+curl "http://localhost:8787/v1/medium?url=https://medium.com/@user/article-id"
 ```
 
-The web UI is at `http://localhost:3000/` — paste a URL, auto-detects the provider,
+The web UI is at `http://localhost:8787/` — paste a URL, auto-detects the provider,
 and shows the output with md/json tabs and line numbers.
 
 ### CLI
@@ -106,7 +107,7 @@ Pipe-friendly: `mdingest https://dev.to/user/post > article.md` gives you clean 
 
 ### MCP server
 
-For AI tools (Claude, Cursor, etc.) — two ways to connect:
+For AI tools (Devin, Claude Code, Cursor, etc.) — two ways to connect:
 
 **Remote (zero setup):** Register the deployed endpoint directly:
 
@@ -135,21 +136,20 @@ For AI tools (Claude, Cursor, etc.) — two ways to connect:
 
 Both expose the same two tools:
 
-| Tool | Description |
-|---|---|
+| Tool             | Description                                                                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `ingest_article` | Ingest a URL into clean Markdown. Auto-detects provider. Returns markdown text by default; `json: true` for `{metadata, markdown}`. |
-| `list_providers` | List supported providers with source, example URL, and accepted domains. |
+| `list_providers` | List supported providers with source, example URL, and accepted domains.                                                            |
 
 ## Configuration
 
-| Env var | Default | Purpose |
-|---|---|---|
-| `PORT` | `3000` | Server port |
-| `FREEDIUM_BASE_URL` | `https://freedium-mirror.cfd` | Freedium mirror base URL |
-| `CACHE_TTL_SECONDS` | `300` | Cache entry TTL (seconds) |
-| `CACHE_MAX_ENTRIES` | `200` | Max cache entries |
-| `FETCH_TIMEOUT_MS` | `20000` | Fetch timeout (ms) |
-| `USER_AGENT` | Chrome 120 UA | User-Agent for upstream requests |
+| Env var             | Default                       | Purpose                          |
+| ------------------- | ----------------------------- | -------------------------------- |
+| `FREEDIUM_BASE_URL` | `https://freedium-mirror.cfd` | Freedium mirror base URL         |
+| `CACHE_TTL_SECONDS` | `300`                         | Cache entry TTL (seconds)        |
+| `CACHE_MAX_ENTRIES` | `200`                         | Max cache entries                |
+| `FETCH_TIMEOUT_MS`  | `20000`                       | Fetch timeout (ms)               |
+| `USER_AGENT`        | Chrome 120 UA                 | User-Agent for upstream requests |
 
 ## Architecture
 
@@ -162,22 +162,18 @@ src/
     freedium/       HTTP client for Freedium mirror (download + data endpoints)
   common/
     types/          Shared types: ArticleMetadata schema, Provider interface
-    pipes/          ZodValidationPipe (validates controller input)
-    filters/        AllExceptionsFilter (shapes errors to { code, message, details?, traceId })
-    guards/         RateLimitGuard (30 req/min per IP, global via APP_GUARD)
-    llm-visibility.ts  Fastify preHandler: Accept: text/markdown negotiation, Link headers, Vary, 406
-    errors/         shapeError() — shared error shaping (filter, CLI, MCP)
+    errors/         IngestError base + shapeError() — shared error contract (API, CLI, MCP)
+  http/
+    api.ts          /v1 router: provider endpoints, /v1/mcp dispatch, 404/405
+    llm-visibility.ts  Accept: text/markdown negotiation, Link headers, 406 — over ASSETS
   modules/
-    medium/         Medium feature: controller, service, DTOs, errors
-    devto/          Dev.to feature: controller, service, DTOs, errors
-    substack/       Substack feature: controller, service, DTOs, errors
-  mcp/              MCP server: server.ts (createMcpServer/startMcpServer/handleHttpRequest), tools.ts (ingest_article, list_providers)
-  app.module.ts     Root module
-  main.ts           Bootstrap (NestJS + Fastify + Bun, URI versioning, global filter)
-  ingest.ts         Shared router: service registry + ingest(url) — used by CLI + MCP
+    medium/         Medium feature: service, DTOs, errors
+    devto/          Dev.to feature: service, DTOs, errors
+    substack/       Substack feature: service, DTOs, errors
+  mcp/              MCP server: server.ts (createMcpServer), stdio.ts, http.ts (stateless transport), tools.ts (ingest_article, list_providers)
+  ingest.ts         Shared router: service registry + ingest(url) — used by API, CLI, MCP
   cli.ts            CLI entry: citty binary, `mdingest <url>` + `mdingest mcp` subcommand
-  mcp.controller.ts MCP HTTP endpoint at /v1/mcp (Streamable HTTP transport)
-  worker.ts         Cloudflare Worker — routes requests to the Docker container
+  worker.ts         Cloudflare Worker — routes /v1/* to the API, everything else to ASSETS
 
 shared/
   providers.ts      Single source of truth: MEDIUM_DOMAINS, PROVIDERS, detectProvider(), error codes
@@ -202,14 +198,14 @@ web/                 Astro static site (React islands)
 
 Four entry points share the same ingestion logic via `src/ingest.ts`:
 
-| Entry point | File | How |
-|---|---|---|
-| HTTP API | `src/main.ts` | NestJS + Fastify, DI wires services, controller delegates to service |
-| CLI | `src/cli.ts` | citty binary: `mdingest <url>` → markdown to stdout, `--json` for structured, `--provider` override |
-| MCP server (stdio) | `src/cli.ts mcp` | stdio JSON-RPC: `ingest_article` + `list_providers` tools |
-| MCP server (HTTP) | `src/mcp.controller.ts` | Streamable HTTP at `/v1/mcp` — same tools, remote, zero local setup |
+| Entry point        | File              | How                                                                                                 |
+| ------------------ | ----------------- | --------------------------------------------------------------------------------------------------- |
+| HTTP API           | `src/worker.ts`   | Cloudflare Worker — `src/http/api.ts` validates and delegates to services                           |
+| CLI                | `src/cli.ts`      | citty binary: `mdingest <url>` → markdown to stdout, `--json` for structured, `--provider` override |
+| MCP server (stdio) | `src/cli.ts mcp`  | stdio JSON-RPC: `ingest_article` + `list_providers` tools                                           |
+| MCP server (HTTP)  | `src/mcp/http.ts` | Stateless Streamable HTTP at `/v1/mcp` — same tools, remote, zero local setup                       |
 
-Each provider implements a `Provider` interface (`matches`, `convert`). Adding a provider = new folder under `modules/`, no changes to core or common. Service classes work with direct `new` outside NestJS — CLI and MCP instantiate them via `src/ingest.ts` without booting NestJS.
+Each provider implements a `Provider` interface (`matches`, `convert`). Adding a provider = new folder under `modules/`, no changes to core or common. Services are plain classes — the API, CLI, and MCP all instantiate them via `src/ingest.ts` with `new`, no framework.
 
 URL detection is centralized in `shared/providers.ts` — `detectProvider(url)` is the single source of truth used by both the frontend (auto-detect) and all 3 backend DTOs (`isValid*Url` delegate to it).
 
@@ -219,27 +215,27 @@ Errors return `{ code, message, details?, traceId }` with namespaced codes (`MED
 
 ### Backend
 
-| Tool | Role |
-|---|---|
-| Bun | Runtime |
-| NestJS + Fastify | Framework (modules, DI, controllers) |
-| Zod | Runtime validation (config, params, metadata) |
-| lru-cache | In-memory cache with TTL |
-| turndown | HTML→Markdown (Substack provider) |
-| oxlint | Linting |
-| @cloudflare/containers | Cloudflare Containers deployment |
-| citty | CLI arg parsing + `--help` generation |
-| @modelcontextprotocol/sdk | MCP server over stdio for AI tools |
+| Tool                      | Role                                          |
+| ------------------------- | --------------------------------------------- |
+| Bun                       | CLI / local dev runtime                       |
+| Cloudflare Workers        | Production runtime — API + static assets      |
+| Wrangler                  | Local dev + deploys (`wrangler dev/deploy`)   |
+| Zod                       | Runtime validation (config, params, metadata) |
+| lru-cache                 | In-memory cache with TTL (per-isolate)        |
+| turndown + domino         | HTML→Markdown (Substack provider)             |
+| oxlint                    | Linting                                       |
+| citty                     | CLI arg parsing + `--help` generation         |
+| @modelcontextprotocol/sdk | MCP server: stdio + streamable HTTP           |
 
 ### Frontend
 
-| Tool | Role |
-|---|---|
-| Astro | Static site generator with React island support |
-| @astrojs/sitemap | Sitemap generation (sitemap-index.xml + sitemap-0.xml) |
-| React | Interactive islands (Ingestor component) |
-| lucide-react + @lucide/astro | Icons |
-| Geist + Geist Mono | Self-hosted fonts |
+| Tool                         | Role                                                   |
+| ---------------------------- | ------------------------------------------------------ |
+| Astro                        | Static site generator with React island support        |
+| @astrojs/sitemap             | Sitemap generation (sitemap-index.xml + sitemap-0.xml) |
+| React                        | Interactive islands (Ingestor component)               |
+| lucide-react + @lucide/astro | Icons                                                  |
+| Geist + Geist Mono           | Self-hosted fonts                                      |
 
 ### UI quality
 
@@ -248,25 +244,25 @@ The `verify` script runs `impeccable` to scan the built frontend for UI anti-pat
 
 ## Roadmap
 
-| Feature | Status | How |
-|---|---|---|
-| HTTP API | Deployed — runtime-verified | `https://mdingest.knightker.workers.dev/v1/medium?url=...` — Cloudflare Containers |
-| Medium provider | Runtime-verified | `GET /v1/medium?url=...` — Freedium dual-source, 48 unit tests |
-| Dev.to provider | Runtime-verified | `GET /v1/devto?url=...` — Forem API, liquid tag transform, 38 unit tests |
-| Substack provider | Runtime-verified | `GET /v1/substack?url=...` — public API + turndown HTML→Markdown, free posts only, home URL redirect resolution, 32 unit tests |
-| Web UI | Runtime-verified | Astro + React islands — landing page, ingest page with md/json tabs + line numbers, API docs |
-| CLI | Runtime-verified | `bun run src/cli.ts <url>` → markdown to stdout; `--json` for structured; `--provider` override; `mdingest providers` lists sources |
-| MCP server (stdio) | Runtime-verified | `bun run src/cli.ts mcp` → stdio JSON-RPC; `ingest_article` + `list_providers` tools; all 3 providers verified |
-| MCP server (HTTP) | Runtime-verified | `POST /v1/mcp` → Streamable HTTP transport; same tools; initialize handshake + session ID; all 3 providers verified |
-| Rate limiting | Runtime-verified | Global `RateLimitGuard` via `APP_GUARD` — 30 req/min per IP; 31st request returns 429 `{ code: "RATE_LIMITED", details: { retryAfter } }` |
-| LLM visibility | Runtime-verified | `robots.txt` + `llms.txt` + `llms-full.txt` + `.md` routes for all 3 pages + `Accept: text/markdown` content negotiation + `Link` headers + `Vary: Accept` + sitemap + FAQ on landing page. 6 Evil Martians techniques implemented. |
-| Agent discovery | Runtime-verified | `.well-known/mcp/server-card.json` (MCP Server Card) + `.well-known/ai-catalog.json` (AI Catalog) + `.well-known/api-catalog` (RFC 9727 linkset). isitagentready.com: Agent-Readable L3. |
+| Feature            | Status                      | How                                                                                                                                                                                                                                 |
+| ------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP API           | Deployed — runtime-verified | `https://mdingest.knightker.workers.dev/v1/medium?url=...` — Cloudflare Workers (static assets + native rate limit)                                                                                                                 |
+| Medium provider    | Runtime-verified            | `GET /v1/medium?url=...` — Freedium dual-source, 48 unit tests                                                                                                                                                                      |
+| Dev.to provider    | Runtime-verified            | `GET /v1/devto?url=...` — Forem API, liquid tag transform, 38 unit tests                                                                                                                                                            |
+| Substack provider  | Runtime-verified            | `GET /v1/substack?url=...` — public API + turndown HTML→Markdown, free posts only, home URL redirect resolution, 32 unit tests                                                                                                      |
+| Web UI             | Runtime-verified            | Astro + React islands — landing page, ingest page with md/json tabs + line numbers, API docs                                                                                                                                        |
+| CLI                | Runtime-verified            | `bun run src/cli.ts <url>` → markdown to stdout; `--json` for structured; `--provider` override; `mdingest providers` lists sources                                                                                                 |
+| MCP server (stdio) | Runtime-verified            | `bun run src/cli.ts mcp` → stdio JSON-RPC; `ingest_article` + `list_providers` tools; all 3 providers verified                                                                                                                      |
+| MCP server (HTTP)  | Runtime-verified            | `POST /v1/mcp` → stateless Streamable HTTP transport; same tools; initialize handshake; all providers verified                                                                                                                      |
+| Rate limiting      | Runtime-verified            | Native `[[ratelimits]]` binding — 30 req/min per client IP on `/v1/*`; 31st request returns 429 `{ code: "RATE_LIMITED", details: { retryAfter } }`                                                                                 |
+| LLM visibility     | Runtime-verified            | `robots.txt` + `llms.txt` + `llms-full.txt` + `.md` routes for all 3 pages + `Accept: text/markdown` content negotiation + `Link` headers + `Vary: Accept` + sitemap + FAQ on landing page. 6 Evil Martians techniques implemented. |
+| Agent discovery    | Runtime-verified            | `.well-known/mcp/server-card.json` (MCP Server Card) + `.well-known/ai-catalog.json` (AI Catalog) + `.well-known/api-catalog` (RFC 9727 linkset). isitagentready.com: Agent-Readable L3.                                            |
 
 ## Development
 
 ```bash
 bun run verify    # typecheck + lint + impeccable (UI anti-pattern scan)
-bun run dev       # start backend dev server with hot reload (port 3000)
+bun run dev       # wrangler dev — API + web UI on :8787
 bun run dev:web   # start Astro dev server (frontend only, port 4321)
 bun run build:web # build Astro frontend to web/dist/
 bun run test      # run unit tests (vitest)

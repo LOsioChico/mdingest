@@ -1,10 +1,20 @@
-import { Injectable, Logger } from "@nestjs/common";
 import TurndownService from "turndown";
+import { createDocument } from "@mixmark-io/domino";
 import { CacheService } from "../../core/cache/cache.service.ts";
 import { config } from "../../core/config/config.ts";
-import { buildFrontmatter, type ArticleMetadata } from "../../common/types/metadata.types.ts";
-import type { ConvertResult, Provider } from "../../common/types/provider.interface.ts";
-import { isValidSubstackUrl, isSubstackHomeUrl, parseSubstackUrl } from "./substack.dto.ts";
+import {
+  buildFrontmatter,
+  type ArticleMetadata,
+} from "../../common/types/metadata.types.ts";
+import type {
+  ConvertResult,
+  Provider,
+} from "../../common/types/provider.interface.ts";
+import {
+  isValidSubstackUrl,
+  isSubstackHomeUrl,
+  parseSubstackUrl,
+} from "./substack.dto.ts";
 import {
   SubstackInvalidUrlError,
   SubstackPaidPostError,
@@ -41,10 +51,8 @@ interface SubstackPostResponse {
   }>;
 }
 
-@Injectable()
 export class SubstackService implements Provider {
   readonly name = "substack";
-  private readonly logger = new Logger(SubstackService.name);
   private readonly turndown: TurndownService;
 
   constructor(private readonly cache: CacheService) {
@@ -68,11 +76,11 @@ export class SubstackService implements Provider {
 
     const cached = this.cache.get(resolvedUrl);
     if (cached) {
-      this.logger.log(`Cache hit: ${resolvedUrl}`);
+      console.error(`Cache hit: ${resolvedUrl}`);
       return this.parseCachedResult(cached, resolvedUrl);
     }
 
-    this.logger.log(`Cache miss, fetching: ${resolvedUrl}`);
+    console.error(`Cache miss, fetching: ${resolvedUrl}`);
 
     const post = await this.fetchPost(resolvedUrl);
 
@@ -81,7 +89,10 @@ export class SubstackService implements Provider {
     }
 
     const preprocessed = this.preprocessHtml(post.body_html);
-    const body = this.turndown.turndown(preprocessed);
+    // No DOMParser on Workers — parse with domino and pass a node so
+    // turndown never touches the global document.
+    const doc = createDocument(`<html><body>${preprocessed}</body></html>`);
+    const body = this.turndown.turndown(doc.body as TurndownService.Node);
     const cleanBody = this.cleanupMarkdown(body);
     const metadata = this.buildMetadata(post, resolvedUrl);
     const bodyWithCover = this.injectCoverImage(cleanBody, post.cover_image);
@@ -114,7 +125,7 @@ export class SubstackService implements Provider {
         throw new SubstackUnavailableError(url);
       }
 
-      this.logger.log(`Resolved home URL: ${url} → ${location}`);
+      console.error(`Resolved home URL: ${url} → ${location}`);
       return location;
     } catch (error) {
       if (error instanceof SubstackUnavailableError) throw error;
@@ -143,13 +154,17 @@ export class SubstackService implements Provider {
       });
 
       if (!response.ok) {
-        throw new Error(`Substack API returned ${response.status}: ${response.statusText}`);
+        throw new Error(
+          `Substack API returned ${response.status}: ${response.statusText}`,
+        );
       }
 
-      return await response.json() as SubstackPostResponse;
+      return (await response.json()) as SubstackPostResponse;
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        throw new SubstackUnavailableError(`Request timed out after ${config.fetchTimeoutMs}ms`);
+        throw new SubstackUnavailableError(
+          `Request timed out after ${config.fetchTimeoutMs}ms`,
+        );
       }
       const reason = error instanceof Error ? error.message : "Unknown error";
       throw new SubstackUnavailableError(reason);
@@ -193,8 +208,10 @@ export class SubstackService implements Provider {
         try {
           const parsed = JSON.parse(decoded) as Record<string, unknown>;
           const url = typeof parsed.url === "string" ? parsed.url : "";
-          const text = typeof parsed.full_text === "string" ? parsed.full_text : "";
-          const username = typeof parsed.username === "string" ? parsed.username : "";
+          const text =
+            typeof parsed.full_text === "string" ? parsed.full_text : "";
+          const username =
+            typeof parsed.username === "string" ? parsed.username : "";
           if (!url) return "";
           const header = username ? `**@${username}**` : "";
           const body = text.replace(/\n/g, "\n> ");
@@ -214,7 +231,9 @@ export class SubstackService implements Provider {
           const parsed = JSON.parse(decoded) as Record<string, unknown>;
           const name = typeof parsed.name === "string" ? parsed.name : "";
           const id = parsed.id;
-          return name && typeof id === "number" ? `<a href="https://substack.com/profile/${id}">@${name}</a>` : "";
+          return name && typeof id === "number"
+            ? `<a href="https://substack.com/profile/${id}">@${name}</a>`
+            : "";
         } catch {
           return "";
         }
@@ -228,8 +247,11 @@ export class SubstackService implements Provider {
         const decoded = this.decodeHtmlEntities(attrs);
         try {
           const parsed = JSON.parse(decoded) as Record<string, unknown>;
-          const videoId = typeof parsed.videoId === "string" ? parsed.videoId : "";
-          return videoId ? `<p><a href="https://youtube.com/watch?v=${videoId}">YouTube video</a></p>` : "";
+          const videoId =
+            typeof parsed.videoId === "string" ? parsed.videoId : "";
+          return videoId
+            ? `<p><a href="https://youtube.com/watch?v=${videoId}">YouTube video</a></p>`
+            : "";
         } catch {
           return "";
         }
@@ -252,11 +274,13 @@ export class SubstackService implements Provider {
    * Clean up markdown output — strip leftover empty spans and whitespace.
    */
   private cleanupMarkdown(md: string): string {
-    return md
-      // Remove empty span tags (turndown doesn't strip them)
-      .replace(/<span[^>]*>([^<]*)<\/span>/g, "$1")
-      // Collapse multiple blank lines
-      .replace(/\n{3,}/g, "\n\n");
+    return (
+      md
+        // Remove empty span tags (turndown doesn't strip them)
+        .replace(/<span[^>]*>([^<]*)<\/span>/g, "$1")
+        // Collapse multiple blank lines
+        .replace(/\n{3,}/g, "\n\n")
+    );
   }
 
   private createTurndownService(): TurndownService {
@@ -291,7 +315,8 @@ export class SubstackService implements Provider {
         node.nodeName === "A" &&
         node.getAttribute("data-component-name") === "FootnoteAnchorToDOM",
       replacement: (_content, node) => {
-        const id = node.getAttribute("id")?.replace("footnote-anchor-", "") ?? "";
+        const id =
+          node.getAttribute("id")?.replace("footnote-anchor-", "") ?? "";
         return id ? `[^${id}]` : "";
       },
     });
@@ -326,8 +351,11 @@ export class SubstackService implements Provider {
         try {
           const decoded = this.decodeHtmlEntities(raw);
           const parsed = JSON.parse(decoded) as Record<string, unknown>;
-          const videoId = typeof parsed.videoId === "string" ? parsed.videoId : "";
-          return videoId ? `\n\n[YouTube video](https://youtube.com/watch?v=${videoId})\n\n` : "";
+          const videoId =
+            typeof parsed.videoId === "string" ? parsed.videoId : "";
+          return videoId
+            ? `\n\n[YouTube video](https://youtube.com/watch?v=${videoId})\n\n`
+            : "";
         } catch {
           return "";
         }
@@ -351,7 +379,10 @@ export class SubstackService implements Provider {
 
   // --- Metadata ---
 
-  private buildMetadata(post: SubstackPostResponse, fallbackUrl: string): ArticleMetadata {
+  private buildMetadata(
+    post: SubstackPostResponse,
+    fallbackUrl: string,
+  ): ArticleMetadata {
     const author = post.publishedBylines?.[0]?.name ?? "Unknown";
 
     return {
@@ -384,16 +415,23 @@ export class SubstackService implements Provider {
   private parseCachedResult(cached: string, url: string): ConvertResult {
     const match = cached.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
     if (!match) {
-      throw new SubstackParseError(`Cache corruption: no frontmatter for ${url}`);
+      throw new SubstackParseError(
+        `Cache corruption: no frontmatter for ${url}`,
+      );
     }
 
     const fm = match[1] ?? "";
 
     const get = (key: string): string | undefined => {
-      const doubleMatch = fm.match(new RegExp(`^${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "m"));
-      if (doubleMatch) return doubleMatch[1]?.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+      const doubleMatch = fm.match(
+        new RegExp(`^${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "m"),
+      );
+      if (doubleMatch)
+        return doubleMatch[1]?.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
 
-      const singleMatch = fm.match(new RegExp(`^${key}:\\s*'((?:[^']|'')*)'`, "m"));
+      const singleMatch = fm.match(
+        new RegExp(`^${key}:\\s*'((?:[^']|'')*)'`, "m"),
+      );
       if (singleMatch) return singleMatch[1]?.replace(/''/g, "'");
 
       const plainMatch = fm.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));

@@ -1,41 +1,37 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { IngestError } from "../../../common/errors/ingest-error.ts";
 
 /**
- * Medium provider domain errors.
- * Each extends the closest semantic Nest exception so the HTTP status is fixed
- * by the class hierarchy. The global exception filter shapes the response body.
- *
+ * Medium provider domain errors (Freedium errors included — the provider
+ * surfaces them under the MEDIUM.* namespace).
+ * httpStatus carries the former HTTP exception mapping (400/502/503).
  * Codes are namespaced: MEDIUM.<REASON>
  */
 
-export class MediumInvalidUrlError extends BadRequestException {
+export class MediumInvalidUrlError extends IngestError {
   constructor(url: string) {
-    super({
-      code: "MEDIUM.INVALID_URL",
-      message: `Not a valid Medium URL: ${url}`,
-      details: { url },
-    });
+    super(400, "MEDIUM.INVALID_URL", `Not a valid Medium URL: ${url}`, { url });
+    this.name = "MediumInvalidUrlError";
   }
 }
 
-export class FreediumUnavailableError extends ServiceUnavailableException {
+export class FreediumUnavailableError extends IngestError {
   constructor(reason: string) {
-    super({
-      code: "MEDIUM.FREEDIUM_UNAVAILABLE",
-      message: `Freedium mirror unavailable: ${reason}`,
-    });
+    super(
+      503,
+      "MEDIUM.FREEDIUM_UNAVAILABLE",
+      `Freedium mirror unavailable: ${reason}`,
+    );
+    this.name = "FreediumUnavailableError";
   }
 }
 
-export class MediumParseError extends BadGatewayException {
+export class MediumParseError extends IngestError {
   constructor(reason: string) {
-    super({
-      code: "MEDIUM.PARSE_FAILED",
-      message: `Failed to parse article data: ${reason}`,
-    });
+    super(
+      502,
+      "MEDIUM.PARSE_FAILED",
+      `Failed to parse article data: ${reason}`,
+    );
+    this.name = "MediumParseError";
   }
 }

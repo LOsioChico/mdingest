@@ -6,8 +6,6 @@
     "lib": ["ES2022"],
     "types": ["@types/bun", "@cloudflare/workers-types"],
     "strict": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
@@ -24,6 +22,6 @@
     "outDir": "./dist",
     "rootDir": "."
   },
-  "include": ["src/**/*.ts", "shared/**/*.ts"],
+  "include": ["src/**/*.ts", "shared/**/*.ts", "worker-configuration.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

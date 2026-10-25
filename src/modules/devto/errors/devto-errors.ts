@@ -1,41 +1,32 @@
-import {
-  BadGatewayException,
-  BadRequestException,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { IngestError } from "../../../common/errors/ingest-error.ts";
 
 /**
  * Dev.to provider domain errors.
- * Each extends the closest semantic Nest exception so the HTTP status is fixed
- * by the class hierarchy. The global exception filter shapes the response body.
- *
+ * httpStatus carries the former HTTP exception mapping (400/502/503).
  * Codes are namespaced: DEVTO.<REASON>
  */
 
-export class DevtoInvalidUrlError extends BadRequestException {
+export class DevtoInvalidUrlError extends IngestError {
   constructor(url: string) {
-    super({
-      code: "DEVTO.INVALID_URL",
-      message: `Not a valid Dev.to URL: ${url}`,
-      details: { url },
-    });
+    super(400, "DEVTO.INVALID_URL", `Not a valid Dev.to URL: ${url}`, { url });
+    this.name = "DevtoInvalidUrlError";
   }
 }
 
-export class DevtoUnavailableError extends ServiceUnavailableException {
+export class DevtoUnavailableError extends IngestError {
   constructor(reason: string) {
-    super({
-      code: "DEVTO.UNAVAILABLE",
-      message: `Dev.to API unavailable: ${reason}`,
-    });
+    super(503, "DEVTO.UNAVAILABLE", `Dev.to API unavailable: ${reason}`);
+    this.name = "DevtoUnavailableError";
   }
 }
 
-export class DevtoParseError extends BadGatewayException {
+export class DevtoParseError extends IngestError {
   constructor(reason: string) {
-    super({
-      code: "DEVTO.PARSE_FAILED",
-      message: `Failed to parse Dev.to article: ${reason}`,
-    });
+    super(
+      502,
+      "DEVTO.PARSE_FAILED",
+      `Failed to parse Dev.to article: ${reason}`,
+    );
+    this.name = "DevtoParseError";
   }
 }

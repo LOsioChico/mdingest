@@ -1,10 +1,13 @@
-import { BadRequestException } from "@nestjs/common";
+import { IngestError } from "./common/errors/ingest-error.ts";
 import { FreediumService } from "./integrations/freedium/freedium.service.ts";
 import { CacheService } from "./core/cache/cache.service.ts";
 import { MediumService } from "./modules/medium/medium.service.ts";
 import { DevtoService } from "./modules/devto/devto.service.ts";
 import { SubstackService } from "./modules/substack/substack.service.ts";
-import type { ConvertResult, Provider } from "./common/types/provider.interface.ts";
+import type {
+  ConvertResult,
+  Provider,
+} from "./common/types/provider.interface.ts";
 import { detectProvider, type ProviderId } from "../shared/providers.ts";
 
 /**
@@ -30,17 +33,21 @@ export interface IngestOptions {
 /**
  * Ingest a URL into clean Markdown + metadata.
  * Auto-detects the provider from the URL, or uses an explicit override.
- * Throws typed domain errors (HttpException subclasses) on failure.
+ * Throws typed domain errors (IngestError subclasses) on failure.
  */
-export async function ingest(url: string, opts?: IngestOptions): Promise<ConvertResult> {
+export async function ingest(
+  url: string,
+  opts?: IngestOptions,
+): Promise<ConvertResult> {
   const providerId = opts?.provider ?? detectProvider(url);
 
   if (!providerId) {
-    throw new BadRequestException({
-      code: "VALIDATION.FAILED",
-      message: `Could not detect provider from URL: ${url}. Supported: Medium, Dev.to, Substack.`,
-      details: { url },
-    });
+    throw new IngestError(
+      400,
+      "VALIDATION.FAILED",
+      `Could not detect provider from URL: ${url}. Supported: Medium, Dev.to, Substack.`,
+      { url },
+    );
   }
 
   return providers[providerId].convert(url);

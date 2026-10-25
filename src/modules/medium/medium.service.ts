@@ -1,4 +1,3 @@
-import { Injectable, Logger } from "@nestjs/common";
 import { FreediumService } from "../../integrations/freedium/freedium.service.ts";
 import { buildFrontmatter, type ArticleMetadata } from "../../common/types/metadata.types.ts";
 import { CacheService } from "../../core/cache/cache.service.ts";
@@ -23,10 +22,8 @@ import { FreediumUnavailableError, MediumInvalidUrlError, MediumParseError } fro
  * Throws typed domain errors — the global exception filter shapes the HTTP response.
  */
 
-@Injectable()
 export class MediumService implements Provider {
   readonly name = "medium";
-  private readonly logger = new Logger(MediumService.name);
 
   constructor(
     private readonly freedium: FreediumService,
@@ -44,11 +41,11 @@ export class MediumService implements Provider {
 
     const cached = this.cache.get(url);
     if (cached) {
-      this.logger.log(`Cache hit: ${url}`);
+      console.error(`Cache hit: ${url}`);
       return this.parseCachedResult(cached, url);
     }
 
-    this.logger.log(`Cache miss, fetching: ${url}`);
+    console.error(`Cache miss, fetching: ${url}`);
 
     // 1. Fetch finished markdown from download endpoint
     let downloadMd;
@@ -66,7 +63,7 @@ export class MediumService implements Provider {
       articleData = await this.freedium.fetchArticleData(url);
     } catch (error) {
       // Non-fatal: download markdown is the primary source
-      this.logger.warn(`Failed to fetch article data: ${error instanceof Error ? error.message : "unknown"}`);
+      console.error(`Failed to fetch article data: ${error instanceof Error ? error.message : "unknown"}`);
     }
 
     // 3. Parse frontmatter from download markdown

@@ -1,20 +1,24 @@
 ---
-import Base from '../layouts/Base.astro';
-import ArrowRight from '@lucide/astro/icons/arrow-right';
-import ChevronRight from '@lucide/astro/icons/chevron-right';
-import ChevronDown from '@lucide/astro/icons/chevron-down';
-import LockOpen from '@lucide/astro/icons/lock-open';
-import Broom from '@lucide/astro/icons/broom';
-import Braces from '@lucide/astro/icons/braces';
-import Database from '@lucide/astro/icons/database';
-import { PROVIDERS, BASE_URL, GITHUB_URL } from '@shared/providers.ts';
+import Base from "../layouts/Base.astro";
+import ArrowRight from "@lucide/astro/icons/arrow-right";
+import ChevronRight from "@lucide/astro/icons/chevron-right";
+import ChevronDown from "@lucide/astro/icons/chevron-down";
+import LockOpen from "@lucide/astro/icons/lock-open";
+import Broom from "@lucide/astro/icons/broom";
+import Braces from "@lucide/astro/icons/braces";
+import Database from "@lucide/astro/icons/database";
+import { PROVIDERS, BASE_URL, GITHUB_URL } from "@shared/providers.ts";
 ---
+
 <Base title="mdingest: Ingest articles to clean Markdown">
   <!-- Hero -->
   <section class="hero">
     <div class="container">
       <p class="eyebrow">article → markdown api</p>
-      <h1>Articles to clean Markdown.<br /><span class="muted">For LLMs, RAG, or reading.</span></h1>
+      <h1>
+        Articles to clean Markdown.<br /><span class="muted"
+          >For LLMs, RAG, or reading.</span>
+      </h1>
       <p class="lead">
         Paste a URL from Medium, Dev.to, or Substack. Get clean Markdown with
         YAML frontmatter: title, author, dates, tags, cover image.
@@ -25,15 +29,26 @@ import { PROVIDERS, BASE_URL, GITHUB_URL } from '@shared/providers.ts';
           <ArrowRight size={14} />
         </a>
         <a href={GITHUB_URL} rel="noopener" class="btn btn-secondary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+            ></path>
           </svg>
           <span>View source</span>
         </a>
       </div>
 
       <!-- Terminal showing real curl → response -->
-      <div class="terminal hero-terminal" data-copy-content={`curl "${BASE_URL}/v1/medium?url=https://medium.com/@user/article"`}>
+      <div
+        class="terminal hero-terminal"
+        data-copy-content={`curl "${BASE_URL}/v1/medium?url=https://medium.com/@user/article"`}
+      >
         <div class="terminal-header">
           <span class="terminal-dots">
             <span class="terminal-dot"></span>
@@ -44,7 +59,7 @@ import { PROVIDERS, BASE_URL, GITHUB_URL } from '@shared/providers.ts';
           <button class="terminal-copy" type="button">Copy</button>
         </div>
         <div class="terminal-body">
-<pre><span class="terminal-prompt">$</span> curl <span class="terminal-string">"{BASE_URL}/v1/medium?url=https://medium.com/@user/article"</span>
+          <pre><span class="terminal-prompt">$</span> curl <span class="terminal-string">"{BASE_URL}/v1/medium?url=https://medium.com/@user/article"</span>
 
 <span class="terminal-comment">---
 title: How to Build APIs
@@ -71,22 +86,33 @@ Full article body in clean Markdown...</span></pre>
         <div class="feature-card">
           <LockOpen size={18} class="feature-icon" />
           <h3>No paywalls</h3>
-          <p>Medium articles via Freedium mirror. Full content, not truncated previews.</p>
+          <p>
+            Medium articles via Freedium mirror. Full content, not truncated
+            previews.
+          </p>
         </div>
         <div class="feature-card">
           <Broom size={18} class="feature-icon" />
           <h3>No UI noise</h3>
-          <p>Strips ads, nav, sidebars, popups, cookie banners. Just the article body.</p>
+          <p>
+            Strips ads, nav, sidebars, popups, cookie banners. Just the article
+            body.
+          </p>
         </div>
         <div class="feature-card">
           <Braces size={18} class="feature-icon" />
           <h3>Structured metadata</h3>
-          <p>YAML frontmatter with title, author, dates, reading time, tags, cover image.</p>
+          <p>
+            YAML frontmatter with title, author, dates, reading time, tags,
+            cover image.
+          </p>
         </div>
         <div class="feature-card">
           <Database size={18} class="feature-icon" />
           <h3>RAG-ready</h3>
-          <p>Clean Markdown. Drop it into your vector DB, LLM context, or CI.</p>
+          <p>
+            Clean Markdown. Drop it into your vector DB, LLM context, or CI.
+          </p>
         </div>
       </div>
     </div>
@@ -98,15 +124,20 @@ Full article body in clean Markdown...</span></pre>
       <p class="eyebrow">supported sources</p>
       <h2>Three sources, one API</h2>
       <div class="source-list">
-        {PROVIDERS.map((p) => (
-          <a href={p.url} rel="noopener" class="source-row">
-            <span class="source-icon provider-icon" style={`--icon-url: url(${p.icon})`}></span>
-            <span class="source-name">{p.label}</span>
-            <code class="source-endpoint">{p.endpoint}</code>
-            <span class="source-desc">{p.source}</span>
-            <ChevronRight size={14} class="source-arrow" />
-          </a>
-        ))}
+        {
+          PROVIDERS.map((p) => (
+            <a href={p.url} rel="noopener" class="source-row">
+              <span
+                class="source-icon provider-icon"
+                style={`--icon-url: url(${p.icon})`}
+              />
+              <span class="source-name">{p.label}</span>
+              <code class="source-endpoint">{p.endpoint}</code>
+              <span class="source-desc">{p.source}</span>
+              <ChevronRight size={14} class="source-arrow" />
+            </a>
+          ))
+        }
       </div>
     </div>
   </section>
@@ -117,17 +148,22 @@ Full article body in clean Markdown...</span></pre>
       <p class="eyebrow">api</p>
       <h2>Three ways to ingest</h2>
       <p class="lead">
-        Same logic, four entry points. HTTP API for your code,
-        CLI for your terminal, MCP for your AI tools.
+        Same logic, four entry points. HTTP API for your code, CLI for your
+        terminal, MCP for your AI tools.
       </p>
 
       <div class="access-list">
         <div class="access-card">
           <div class="access-card-head">
             <h3>HTTP API</h3>
-            <span class="access-card-sub">for your code, RAG pipeline, or CI</span>
+            <span class="access-card-sub"
+              >for your code, RAG pipeline, or CI</span
+            >
           </div>
-          <div class="terminal" data-copy-content={`fetch("${BASE_URL}/v1/devto?url=https://dev.to/user/post")`}>
+          <div
+            class="terminal"
+            data-copy-content={`fetch("${BASE_URL}/v1/devto?url=https://dev.to/user/post")`}
+          >
             <div class="terminal-header">
               <span class="terminal-dots">
                 <span class="terminal-dot"></span>
@@ -138,7 +174,7 @@ Full article body in clean Markdown...</span></pre>
               <button class="terminal-copy" type="button">Copy</button>
             </div>
             <div class="terminal-body">
-<pre><span class="terminal-keyword">const</span> res = <span class="terminal-keyword">await</span> fetch(
+              <pre><span class="terminal-keyword">const</span> res = <span class="terminal-keyword">await</span> fetch(
   <span class="terminal-string">"{BASE_URL}/v1/devto?url=https://dev.to/user/post"</span>
 );
 <span class="terminal-keyword">const</span>{' { metadata, markdown } = await res.json();'}</pre>
@@ -149,9 +185,14 @@ Full article body in clean Markdown...</span></pre>
         <div class="access-card">
           <div class="access-card-head">
             <h3>CLI</h3>
-            <span class="access-card-sub">pipe-friendly, markdown to stdout</span>
+            <span class="access-card-sub"
+              >pipe-friendly, markdown to stdout</span
+            >
           </div>
-          <div class="terminal" data-copy-content={`bun run src/cli.ts https://dev.to/user/post > article.md`}>
+          <div
+            class="terminal"
+            data-copy-content={`bun run src/cli.ts https://dev.to/user/post > article.md`}
+          >
             <div class="terminal-header">
               <span class="terminal-dots">
                 <span class="terminal-dot"></span>
@@ -162,7 +203,7 @@ Full article body in clean Markdown...</span></pre>
               <button class="terminal-copy" type="button">Copy</button>
             </div>
             <div class="terminal-body">
-<pre><span class="terminal-prompt">$</span> bun run src/cli.ts https://dev.to/user/post > article.md
+              <pre><span class="terminal-prompt">$</span> bun run src/cli.ts https://dev.to/user/post > article.md
 <span class="terminal-comment"># --json for {'{metadata, markdown}'}</span>
 <span class="terminal-comment"># --provider medium to override</span></pre>
             </div>
@@ -172,9 +213,14 @@ Full article body in clean Markdown...</span></pre>
         <div class="access-card">
           <div class="access-card-head">
             <h3>MCP server</h3>
-            <span class="access-card-sub">for Claude, Cursor, and other AI tools</span>
+            <span class="access-card-sub"
+              >for Claude, Cursor, and other AI tools</span
+            >
           </div>
-          <div class="terminal" data-copy-content={`{ "url": "${BASE_URL}/v1/mcp" }`}>
+          <div
+            class="terminal"
+            data-copy-content={`{ "url": "${BASE_URL}/v1/mcp" }`}
+          >
             <div class="terminal-header">
               <span class="terminal-dots">
                 <span class="terminal-dot"></span>
@@ -185,7 +231,7 @@ Full article body in clean Markdown...</span></pre>
               <button class="terminal-copy" type="button">Copy</button>
             </div>
             <div class="terminal-body">
-<pre><span class="terminal-comment"># Remote (zero setup):</span>
+              <pre><span class="terminal-comment"># Remote (zero setup):</span>
 <span class="terminal-keyword">{`{ "url": "${BASE_URL}/v1/mcp" }`}</span>
 <span class="terminal-comment"># Tools: ingest_article, list_providers</span></pre>
             </div>
@@ -212,7 +258,12 @@ Full article body in clean Markdown...</span></pre>
           </button>
           <div class="faq-answer-wrapper">
             <div class="faq-answer">
-              <p>mdingest is an API that converts blog, article, and newsletter pages from Medium, Dev.to, and Substack into clean Markdown with YAML frontmatter. It strips ads, navigation, and UI noise so the output is ready for LLM ingestion, RAG pipelines, or reading.</p>
+              <p>
+                mdingest is an API that converts blog, article, and newsletter
+                pages from Medium, Dev.to, and Substack into clean Markdown with
+                YAML frontmatter. It strips ads, navigation, and UI noise so the
+                output is ready for LLM ingestion, RAG pipelines, or reading.
+              </p>
             </div>
           </div>
         </div>
@@ -223,7 +274,13 @@ Full article body in clean Markdown...</span></pre>
           </button>
           <div class="faq-answer-wrapper">
             <div class="faq-answer">
-              <p>Three sources: Medium (via Freedium mirror, 42 accepted domains including custom domains like <code>itnext.io</code> and <code>towardsdatascience.com</code>), Dev.to (via public Forem API), and Substack (via public API, free posts only).</p>
+              <p>
+                Three sources: Medium (via Freedium mirror, 42 accepted domains
+                including custom domains like <code>itnext.io</code> and <code
+                  >towardsdatascience.com</code
+                >), Dev.to (via public Forem API), and Substack (via public API,
+                free posts only).
+              </p>
             </div>
           </div>
         </div>
@@ -234,7 +291,14 @@ Full article body in clean Markdown...</span></pre>
           </button>
           <div class="faq-answer-wrapper">
             <div class="faq-answer">
-              <p>Yes. The default output is clean Markdown with structured YAML frontmatter (title, author, dates, reading time, tags, cover image). Drop it directly into your vector database, LLM context window, or CI pipeline. Use <code>format=json</code> to get <code>{'{ metadata, markdown }'}</code> as separate fields.</p>
+              <p>
+                Yes. The default output is clean Markdown with structured YAML
+                frontmatter (title, author, dates, reading time, tags, cover
+                image). Drop it directly into your vector database, LLM context
+                window, or CI pipeline. Use <code>format=json</code> to get <code
+                  >{"{ metadata, markdown }"}</code
+                > as separate fields.
+              </p>
             </div>
           </div>
         </div>
@@ -245,7 +309,12 @@ Full article body in clean Markdown...</span></pre>
           </button>
           <div class="faq-answer-wrapper">
             <div class="faq-answer">
-              <p>Yes. 30 requests per minute per IP. When exceeded, the API returns HTTP 429 with <code>{'{ code: "RATE_LIMITED", details: { retryAfter } }'}</code> where <code>retryAfter</code> is seconds until the limit resets.</p>
+              <p>
+                Yes. 30 requests per minute per IP. When exceeded, the API
+                returns HTTP 429 with <code
+                  >{'{ code: "RATE_LIMITED", details: { retryAfter } }'}</code
+                > where <code>retryAfter</code> is seconds until the limit resets.
+              </p>
             </div>
           </div>
         </div>
@@ -256,7 +325,15 @@ Full article body in clean Markdown...</span></pre>
           </button>
           <div class="faq-answer-wrapper">
             <div class="faq-answer">
-              <p>Yes. The entire codebase is MIT licensed and on <a href={GITHUB_URL} rel="noopener">GitHub</a>. Deploy it on Cloudflare Containers (Worker + Docker container), or run it locally with <code>bun run dev</code>. The CLI and MCP server work standalone without the HTTP server.</p>
+              <p>
+                Yes. The entire codebase is MIT licensed and on <a
+                  href={GITHUB_URL}
+                  rel="noopener">GitHub</a
+                >. Deploy it on Cloudflare Workers (<code>wrangler deploy</code> ships
+                the API and static site together — no container to run or pay for),
+                or run it locally with <code>bun run dev</code>. The CLI and MCP
+                server work standalone without the HTTP server.
+              </p>
             </div>
           </div>
         </div>
@@ -267,7 +344,13 @@ Full article body in clean Markdown...</span></pre>
           </button>
           <div class="faq-answer-wrapper">
             <div class="faq-answer">
-              <p>Yes. Medium articles are fetched via the Freedium mirror, which provides full article content regardless of Medium's paywall. The dual-source approach combines the download endpoint (markdown body, tags, dates) with the <code>__data.json</code> endpoint (author, reading time, cover image).</p>
+              <p>
+                Yes. Medium articles are fetched via the Freedium mirror, which
+                provides full article content regardless of Medium's paywall.
+                The dual-source approach combines the download endpoint
+                (markdown body, tags, dates) with the <code>__data.json</code> endpoint
+                (author, reading time, cover image).
+              </p>
             </div>
           </div>
         </div>
@@ -278,7 +361,13 @@ Full article body in clean Markdown...</span></pre>
           </button>
           <div class="faq-answer-wrapper">
             <div class="faq-answer">
-              <p>No. Substack's public API only returns full content for free posts. Paid posts are server-side truncated, so the API returns <code>SUBSTACK.PAID_POST</code> (403) when a post is behind the paywall. Only free Substack posts can be converted.</p>
+              <p>
+                No. Substack's public API only returns full content for free
+                posts. Paid posts are server-side truncated, so the API returns <code
+                  >SUBSTACK.PAID_POST</code
+                > (403) when a post is behind the paywall. Only free Substack posts
+                can be converted.
+              </p>
             </div>
           </div>
         </div>
@@ -292,8 +381,8 @@ Full article body in clean Markdown...</span></pre>
       <p class="eyebrow">source code</p>
       <h2>MIT licensed. Self-hostable.</h2>
       <p class="lead">
-        The entire codebase is on GitHub. Deploy it on Cloudflare, run it locally,
-        or just read how it works.
+        The entire codebase is on GitHub. Deploy it on Cloudflare, run it
+        locally, or just read how it works.
       </p>
       <p class="section-link">
         <a href={GITHUB_URL} rel="noopener">github.com/LOsioChico/mdingest →</a>
@@ -304,35 +393,39 @@ Full article body in clean Markdown...</span></pre>
 
 <script>
   // Copy button on terminal blocks
-  document.querySelectorAll('.terminal[data-copy-content]').forEach((el) => {
-    const btn = el.querySelector('.terminal-copy');
+  document.querySelectorAll(".terminal[data-copy-content]").forEach((el) => {
+    const btn = el.querySelector(".terminal-copy");
     if (!btn) return;
-    btn.addEventListener('click', () => {
-      const content = el.getAttribute('data-copy-content') ?? '';
+    btn.addEventListener("click", () => {
+      const content = el.getAttribute("data-copy-content") ?? "";
       navigator.clipboard.writeText(content);
       const original = btn.textContent;
-      btn.textContent = 'copied';
-      setTimeout(() => { btn.textContent = original; }, 1200);
+      btn.textContent = "copied";
+      setTimeout(() => {
+        btn.textContent = original;
+      }, 1200);
     });
   });
 
   // FAQ accordion — single-open, smooth height via grid-template-rows
-  const faqItems = document.querySelectorAll('.faq-item');
+  const faqItems = document.querySelectorAll(".faq-item");
   faqItems.forEach((item) => {
-    const question = item.querySelector('.faq-question');
+    const question = item.querySelector(".faq-question");
     if (!question) return;
-    question.addEventListener('click', () => {
-      const isOpen = item.classList.contains('open');
+    question.addEventListener("click", () => {
+      const isOpen = item.classList.contains("open");
       // Close all others
       faqItems.forEach((other) => {
         if (other !== item) {
-          other.classList.remove('open');
-          other.querySelector('.faq-question')?.setAttribute('aria-expanded', 'false');
+          other.classList.remove("open");
+          other
+            .querySelector(".faq-question")
+            ?.setAttribute("aria-expanded", "false");
         }
       });
       // Toggle current
-      item.classList.toggle('open', !isOpen);
-      question.setAttribute('aria-expanded', String(!isOpen));
+      item.classList.toggle("open", !isOpen);
+      question.setAttribute("aria-expanded", String(!isOpen));
     });
   });
 </script>
@@ -400,7 +493,9 @@ Full article body in clean Markdown...</span></pre>
   }
 
   @media (max-width: 640px) {
-    .feature-grid { grid-template-columns: 1fr; }
+    .feature-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .source-list {
@@ -421,9 +516,13 @@ Full article body in clean Markdown...</span></pre>
     transition: background var(--duration-fast) var(--ease-out);
   }
   @media (hover: hover) and (pointer: fine) {
-    .source-row:hover { background: var(--bg-surface); }
+    .source-row:hover {
+      background: var(--bg-surface);
+    }
   }
-  .source-row:last-child { border-bottom: none; }
+  .source-row:last-child {
+    border-bottom: none;
+  }
   .source-arrow {
     color: var(--ink-dim);
     justify-self: end;
@@ -498,17 +597,34 @@ Full article body in clean Markdown...</span></pre>
   }
 
   @media (max-width: 768px) {
-    .hero { padding: var(--space-16) 0 var(--space-12); }
+    .hero {
+      padding: var(--space-16) 0 var(--space-12);
+    }
     .source-row {
       grid-template-columns: 20px 1fr 20px;
       gap: var(--space-1);
       padding: var(--space-4);
     }
-    .source-icon { grid-column: 1; grid-row: 1; align-self: center; }
-    .source-name { grid-column: 2; }
-    .source-endpoint { grid-column: 2; font-size: var(--text-sm); }
-    .source-desc { grid-column: 2; }
-    .source-arrow { grid-column: 3; grid-row: 1 / span 4; align-self: center; }
+    .source-icon {
+      grid-column: 1;
+      grid-row: 1;
+      align-self: center;
+    }
+    .source-name {
+      grid-column: 2;
+    }
+    .source-endpoint {
+      grid-column: 2;
+      font-size: var(--text-sm);
+    }
+    .source-desc {
+      grid-column: 2;
+    }
+    .source-arrow {
+      grid-column: 3;
+      grid-row: 1 / span 4;
+      align-self: center;
+    }
   }
 
   .faq {
@@ -522,11 +638,17 @@ Full article body in clean Markdown...</span></pre>
     padding: 16px 20px;
     transition: background var(--duration-fast) var(--ease-out);
   }
-  .faq-item:last-child { border-bottom: none; }
-  @media (hover: hover) and (pointer: fine) {
-    .faq-item:hover { background: var(--bg-surface); }
+  .faq-item:last-child {
+    border-bottom: none;
   }
-  .faq-item.open { background: var(--bg-surface); }
+  @media (hover: hover) and (pointer: fine) {
+    .faq-item:hover {
+      background: var(--bg-surface);
+    }
+  }
+  .faq-item.open {
+    background: var(--bg-surface);
+  }
   .faq-question {
     display: flex;
     align-items: center;
@@ -545,15 +667,18 @@ Full article body in clean Markdown...</span></pre>
   .faq-chevron {
     color: var(--ink-dim);
     flex-shrink: 0;
-    transition: transform var(--duration-normal) var(--ease-out),
-                color var(--duration-fast) var(--ease-out);
+    transition:
+      transform var(--duration-normal) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
   }
   .faq-item.open .faq-chevron {
     transform: rotate(180deg);
     color: var(--accent);
   }
   @media (hover: hover) and (pointer: fine) {
-    .faq-question:hover .faq-chevron { color: var(--accent); }
+    .faq-question:hover .faq-chevron {
+      color: var(--accent);
+    }
   }
   .faq-answer-wrapper {
     display: grid;

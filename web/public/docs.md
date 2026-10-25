@@ -180,7 +180,7 @@ Yes. 30 requests per minute per IP. When exceeded, the API returns HTTP 429 with
 
 ### Can I self-host?
 
-Yes. The entire codebase is MIT licensed and on [GitHub](https://github.com/LOsioChico/mdingest). Deploy it on Cloudflare Containers (Worker + Docker container), or run it locally with `bun run dev`. The CLI and MCP server work standalone without the HTTP server.
+Yes. The entire codebase is MIT licensed and on [GitHub](https://github.com/LOsioChico/mdingest). Deploy it on Cloudflare Workers (`wrangler deploy` ships the API and static site together — no container to run or pay for), or run it locally with `bun run dev`. The CLI and MCP server work standalone without the HTTP server.
 
 ### Does it work with paywalled Medium articles?
 

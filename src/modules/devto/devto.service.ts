@@ -1,4 +1,3 @@
-import { Injectable, Logger } from "@nestjs/common";
 import { CacheService } from "../../core/cache/cache.service.ts";
 import { config } from "../../core/config/config.ts";
 import { buildFrontmatter, type ArticleMetadata } from "../../common/types/metadata.types.ts";
@@ -37,10 +36,8 @@ interface DevtoArticleResponse {
   };
 }
 
-@Injectable()
 export class DevtoService implements Provider {
   readonly name = "devto";
-  private readonly logger = new Logger(DevtoService.name);
 
   constructor(private readonly cache: CacheService) {}
 
@@ -55,11 +52,11 @@ export class DevtoService implements Provider {
 
     const cached = this.cache.get(url);
     if (cached) {
-      this.logger.log(`Cache hit: ${url}`);
+      console.error(`Cache hit: ${url}`);
       return this.parseCachedResult(cached, url);
     }
 
-    this.logger.log(`Cache miss, fetching: ${url}`);
+    console.error(`Cache miss, fetching: ${url}`);
 
     const article = await this.fetchArticle(url);
     const body = this.stripDevtoFrontmatter(article.body_markdown);

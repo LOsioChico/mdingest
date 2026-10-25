@@ -1,4 +1,3 @@
-import { Injectable, Logger } from "@nestjs/common";
 import { config } from "../../core/config/config.ts";
 
 /**
@@ -43,9 +42,7 @@ export interface FreediumArticleData {
   readonly metadata: FreediumArticleMetadata;
 }
 
-@Injectable()
 export class FreediumService {
-  private readonly logger = new Logger(FreediumService.name);
 
   /**
    * Fetch finished markdown from Freedium's download endpoint.
@@ -59,7 +56,7 @@ export class FreediumService {
   async fetchMarkdown(mediumUrl: string): Promise<FreediumMarkdownResponse> {
     const downloadUrl = `${config.freediumBaseUrl}/api/download?url=${encodeURIComponent(mediumUrl)}`;
 
-    this.logger.log(`Fetching markdown: ${downloadUrl}`);
+    console.error(`Fetching markdown: ${downloadUrl}`);
 
     let best: { markdown: string; placeholders: number } | null = null;
 
@@ -89,7 +86,7 @@ export class FreediumService {
         return { markdown, url: downloadUrl };
       }
 
-      this.logger.warn(`Attempt ${attempt}: ${placeholders} embedded placeholders, retrying`);
+      console.error(`Attempt ${attempt}: ${placeholders} embedded placeholders, retrying`);
 
       if (!best || placeholders < best.placeholders) {
         best = { markdown, placeholders };
@@ -116,7 +113,7 @@ export class FreediumService {
   async fetchArticleData(mediumUrl: string): Promise<FreediumArticleData> {
     const dataUrl = `${config.freediumBaseUrl}/${mediumUrl}/__data.json`;
 
-    this.logger.log(`Fetching article data: ${dataUrl}`);
+    console.error(`Fetching article data: ${dataUrl}`);
 
     const response = await this.fetchWithTimeout(dataUrl);
 

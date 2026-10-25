@@ -1,16 +1,24 @@
 ---
-const { title = 'mdingest', description = 'Ingest articles to clean Markdown for LLMs' } = Astro.props;
-import '@fontsource-variable/geist';
-import '@fontsource-variable/geist-mono';
-import { ClientRouter } from 'astro:transitions';
-import FileInput from '@lucide/astro/icons/file-input';
-import BookOpen from '@lucide/astro/icons/book-open';
-import Star from '@lucide/astro/icons/star';
-import Heart from '@lucide/astro/icons/heart';
-import Slash from '@lucide/astro/icons/slash';
-import ChevronRight from '@lucide/astro/icons/chevron-right';
-import { GITHUB_URL, GITHUB_REPO, GITHUB_PROFILE_URL, BASE_URL } from '@shared/providers.ts';
-import '../styles/global.css';
+const {
+  title = "mdingest",
+  description = "Ingest articles to clean Markdown for LLMs",
+} = Astro.props;
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
+import { ClientRouter } from "astro:transitions";
+import FileInput from "@lucide/astro/icons/file-input";
+import BookOpen from "@lucide/astro/icons/book-open";
+import Star from "@lucide/astro/icons/star";
+import Heart from "@lucide/astro/icons/heart";
+import Slash from "@lucide/astro/icons/slash";
+import ChevronRight from "@lucide/astro/icons/chevron-right";
+import {
+  GITHUB_URL,
+  GITHUB_REPO,
+  GITHUB_PROFILE_URL,
+  BASE_URL,
+} from "@shared/providers.ts";
+import "../styles/global.css";
 
 // SSG fetch — GitHub stars at build time. Full try/catch, fallback to 0.
 let stars = 0;
@@ -28,9 +36,10 @@ const ogTitle = title;
 const ogImage = `${BASE_URL}/og.svg`;
 
 // Compute .md alternate path for this page
-const pathName = Astro.url.pathname.replace(/\/$/, '');
-const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
+const pathName = Astro.url.pathname.replace(/\/$/, "");
+const mdPath = pathName === "" ? "/index.md" : `${pathName}.md`;
 ---
+
 <!doctype html>
 <html lang="en">
   <head>
@@ -58,15 +67,36 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
   </head>
   <body>
     <div class="visually-hidden" aria-hidden="true">
-      A Markdown version of this page is available at {BASE_URL}{mdPath} — optimized for AI and LLM tools.
+      A Markdown version of this page is available at {BASE_URL}{mdPath} — optimized
+      for AI and LLM tools.
     </div>
     <header class="site-header" transition:persist>
       <div class="container site-header-inner">
         <a href="/" class="wordmark">
           <span class="wordmark-icon">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="2" width="12" height="12" rx="2" fill="oklch(63% 0.20 250)" />
-              <text x="8" y="11.5" font-family="monospace" font-size="9" font-weight="700" fill="oklch(98% 0.01 260)" text-anchor="middle">m</text>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect
+                x="2"
+                y="2"
+                width="12"
+                height="12"
+                rx="2"
+                fill="oklch(63% 0.20 250)"></rect>
+              <text
+                x="8"
+                y="11.5"
+                font-family="monospace"
+                font-size="9"
+                font-weight="700"
+                fill="oklch(98% 0.01 260)"
+                text-anchor="middle">m</text
+              >
             </svg>
           </span>
           <span>mdingest</span>
@@ -81,8 +111,16 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
             <span>Docs</span>
           </a>
           <a href={GITHUB_URL} rel="noopener" class="nav-link github-link">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+              ></path>
             </svg>
             <Star size={12} />
             <span class="star-count">{stars}</span>
@@ -99,13 +137,35 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
       <div class="container">
         <div class="footer-top">
           <a href="/" class="footer-brand">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2" y="2" width="12" height="12" rx="2" fill="oklch(63% 0.20 250)" />
-              <text x="8" y="11.5" font-family="monospace" font-size="9" font-weight="700" fill="oklch(98% 0.01 260)" text-anchor="middle">m</text>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect
+                x="2"
+                y="2"
+                width="12"
+                height="12"
+                rx="2"
+                fill="oklch(63% 0.20 250)"></rect>
+              <text
+                x="8"
+                y="11.5"
+                font-family="monospace"
+                font-size="9"
+                font-weight="700"
+                fill="oklch(98% 0.01 260)"
+                text-anchor="middle">m</text
+              >
             </svg>
             <span>mdingest</span>
           </a>
-          <p class="footer-tagline">Articles to clean Markdown for LLMs, RAG, or reading.</p>
+          <p class="footer-tagline">
+            Articles to clean Markdown for LLMs, RAG, or reading.
+          </p>
         </div>
         <div class="footer-bottom">
           <div class="footer-meta">
@@ -115,19 +175,38 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
             <span class="footer-updated">Last updated: 2026-08-29</span>
             <ChevronRight size={11} class="footer-sep-icon" />
             <div class="footer-stack">
-              <a href="https://bun.sh" rel="noopener" class="stack-link" title="Bun">
-                <img src="/icons/bun.svg" alt="" width="12" height="12" class="stack-icon" loading="lazy" />
+              <a
+                href="https://bun.sh"
+                rel="noopener"
+                class="stack-link"
+                title="Bun"
+              >
+                <img
+                  src="/icons/bun.svg"
+                  alt=""
+                  width="12"
+                  height="12"
+                  class="stack-icon"
+                  loading="lazy"
+                />
                 <span>Bun</span>
               </a>
               <ChevronRight size={10} class="stack-sep" />
-              <a href="https://nestjs.com" rel="noopener" class="stack-link" title="NestJS">
-                <img src="/icons/nestjs.svg" alt="" width="12" height="12" class="stack-icon" loading="lazy" />
-                <span>NestJS</span>
-              </a>
-              <ChevronRight size={10} class="stack-sep" />
-              <a href="https://cloudflare.com" rel="noopener" class="stack-link" title="Cloudflare">
-                <img src="/icons/cloudflare.svg" alt="" width="14" height="12" class="stack-icon" loading="lazy" />
-                <span>Cloudflare</span>
+              <a
+                href="https://workers.cloudflare.com"
+                rel="noopener"
+                class="stack-link"
+                title="Cloudflare Workers"
+              >
+                <img
+                  src="/icons/cloudflare.svg"
+                  alt=""
+                  width="14"
+                  height="12"
+                  class="stack-icon"
+                  loading="lazy"
+                />
+                <span>Workers</span>
               </a>
             </div>
           </div>
@@ -180,7 +259,9 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
         color: var(--ink);
       }
       @media (hover: hover) and (pointer: fine) {
-        .wordmark:hover { color: var(--accent); }
+        .wordmark:hover {
+          color: var(--accent);
+        }
       }
       .site-nav {
         display: flex;
@@ -195,11 +276,15 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
         padding: var(--space-2) var(--space-4);
         color: var(--ink-muted);
         border-radius: var(--radius-sm);
-        transition: color var(--duration-fast) var(--ease-out),
-                    background var(--duration-fast) var(--ease-out);
+        transition:
+          color var(--duration-fast) var(--ease-out),
+          background var(--duration-fast) var(--ease-out);
       }
       @media (hover: hover) and (pointer: fine) {
-        .nav-link:hover { color: var(--ink); background: var(--bg-surface); }
+        .nav-link:hover {
+          color: var(--ink);
+          background: var(--bg-surface);
+        }
       }
       .github-link {
         font-variant-numeric: tabular-nums;
@@ -256,7 +341,9 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
         color: var(--error);
       }
       @media (hover: hover) and (pointer: fine) {
-        .footer-author:hover { color: var(--accent); }
+        .footer-author:hover {
+          color: var(--accent);
+        }
       }
       .footer-sep-icon {
         color: var(--border-bright);
@@ -287,8 +374,12 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
         transition: color var(--duration-fast) var(--ease-out);
       }
       @media (hover: hover) and (pointer: fine) {
-        .stack-link:hover { color: var(--ink-muted); }
-        .stack-link:hover .stack-icon { opacity: 1; }
+        .stack-link:hover {
+          color: var(--ink-muted);
+        }
+        .stack-link:hover .stack-icon {
+          opacity: 1;
+        }
       }
       .footer-stack {
         color: var(--ink-dim);
@@ -301,12 +392,20 @@ const mdPath = pathName === '' ? '/index.md' : `${pathName}.md`;
         color: var(--ink-dim);
       }
       @media (hover: hover) and (pointer: fine) {
-        .footer-nav a:hover { color: var(--ink-muted); }
+        .footer-nav a:hover {
+          color: var(--ink-muted);
+        }
       }
 
       @media (max-width: 640px) {
-        .nav-link span:not(.star-count) { display: none; }
-        .footer-bottom { flex-direction: column; gap: var(--space-3); align-items: flex-start; }
+        .nav-link span:not(.star-count) {
+          display: none;
+        }
+        .footer-bottom {
+          flex-direction: column;
+          gap: var(--space-3);
+          align-items: flex-start;
+        }
       }
     </style>
   </body>

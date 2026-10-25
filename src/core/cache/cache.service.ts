@@ -1,4 +1,3 @@
-import { Injectable } from "@nestjs/common";
 import { LRUCache } from "lru-cache";
 import { config } from "../config/config.ts";
 
@@ -11,7 +10,6 @@ import { config } from "../config/config.ts";
  * Lost on restart — acceptable for a personal API.
  */
 
-@Injectable()
 export class CacheService {
   private readonly cache: LRUCache<string, string>;
 

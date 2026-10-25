@@ -32,5 +32,5 @@ author: Jane Doe
 ---</text>
 
   <!-- Tech badges -->
-  <text x="900" y="540" font-family="monospace" font-size="16" fill="oklch(50% 0.02 260)">Bun / NestJS / Cloudflare</text>
+  <text x="900" y="540" font-family="monospace" font-size="16" fill="oklch(50% 0.02 260)">Bun / Cloudflare Workers</text>
 </svg>
