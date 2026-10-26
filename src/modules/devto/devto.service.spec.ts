@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { DevtoService } from "./devto.service.ts";
 import { CacheService } from "../../core/cache/cache.service.ts";
+import { DevtoParseError } from "./errors/devto-errors.ts";
 
 const SAMPLE_ARTICLE = {
   title: "Test Dev.to Article",
@@ -32,7 +33,9 @@ More text.`,
   },
 };
 
-function makeMockFetch(article: typeof SAMPLE_ARTICLE | null): ReturnType<typeof vi.fn> {
+function makeMockFetch(
+  article: Record<string, unknown> | null,
+): ReturnType<typeof vi.fn> {
   if (article) {
     return vi.fn().mockResolvedValue({
       ok: true,
@@ -48,7 +51,9 @@ function makeMockFetch(article: typeof SAMPLE_ARTICLE | null): ReturnType<typeof
   });
 }
 
-function makeService(article: typeof SAMPLE_ARTICLE | null = SAMPLE_ARTICLE): DevtoService {
+function makeService(
+  article: Record<string, unknown> | null = SAMPLE_ARTICLE,
+): DevtoService {
   const cache = new CacheService();
   const service = new DevtoService(cache);
   // Mock the global fetch
@@ -108,7 +113,9 @@ describe("DevtoService.convert", () => {
       const h1Idx = result.markdown.indexOf("# Test Dev.to Article");
       const coverIdx = result.markdown.indexOf("![Cover image]");
       expect(coverIdx).toBeGreaterThan(h1Idx);
-      expect(result.markdown).toContain("![Cover image](https://media2.dev.to/dynamic/image/cover.png)");
+      expect(result.markdown).toContain(
+        "![Cover image](https://media2.dev.to/dynamic/image/cover.png)",
+      );
     });
 
     it("does not inject cover image when null", async () => {
@@ -134,7 +141,9 @@ describe("DevtoService.convert", () => {
       const result = await service.convert(TEST_URL);
 
       expect(result.markdown).not.toContain("{% youtube");
-      expect(result.markdown).toContain("[YouTube video](https://youtube.com/watch?v=dQw4w9WgXcQ)");
+      expect(result.markdown).toContain(
+        "[YouTube video](https://youtube.com/watch?v=dQw4w9WgXcQ)",
+      );
     });
 
     it("transforms embed liquid tag to link", async () => {
@@ -142,7 +151,9 @@ describe("DevtoService.convert", () => {
       const result = await service.convert(TEST_URL);
 
       expect(result.markdown).not.toContain("{% embed");
-      expect(result.markdown).toContain("[Embedded content](https://dev.to/lovestaco/some-post)");
+      expect(result.markdown).toContain(
+        "[Embedded content](https://dev.to/lovestaco/some-post)",
+      );
     });
 
     it("transforms github liquid tag to link", async () => {
@@ -150,7 +161,9 @@ describe("DevtoService.convert", () => {
       const result = await service.convert(TEST_URL);
 
       expect(result.markdown).not.toContain("{% github");
-      expect(result.markdown).toContain("[GitHub repository](https://github.com/user/repo)");
+      expect(result.markdown).toContain(
+        "[GitHub repository](https://github.com/user/repo)",
+      );
     });
   });
 
@@ -158,7 +171,8 @@ describe("DevtoService.convert", () => {
     it("transforms details block tag", () => {
       const cache = new CacheService();
       const service = new DevtoService(cache);
-      const input = "Some text\n\n{% details Click to expand %}\nHidden content here\n{% enddetails %}\n\nMore text";
+      const input =
+        "Some text\n\n{% details Click to expand %}\nHidden content here\n{% enddetails %}\n\nMore text";
       const result = service.transformLiquidTags(input);
 
       expect(result).toContain("<details><summary>Click to expand</summary>");
@@ -191,13 +205,17 @@ describe("DevtoService.convert", () => {
       const service = new DevtoService(cache);
       const result = service.transformLiquidTags("{% twitter 123456789 %}");
 
-      expect(result).toBe("[Tweet](https://twitter.com/i/web/status/123456789)");
+      expect(result).toBe(
+        "[Tweet](https://twitter.com/i/web/status/123456789)",
+      );
     });
 
     it("transforms gist liquid tag", () => {
       const cache = new CacheService();
       const service = new DevtoService(cache);
-      const result = service.transformLiquidTags("{% gist https://gist.github.com/user/abc123 %}");
+      const result = service.transformLiquidTags(
+        "{% gist https://gist.github.com/user/abc123 %}",
+      );
 
       expect(result).toBe("[GitHub Gist](https://gist.github.com/user/abc123)");
     });
@@ -245,7 +263,9 @@ describe("DevtoService.convert", () => {
   describe("URL validation", () => {
     it("throws DevtoInvalidUrlError for non-Dev.to URL", async () => {
       const service = makeService();
-      await expect(service.convert("https://example.com/article")).rejects.toThrow();
+      await expect(
+        service.convert("https://example.com/article"),
+      ).rejects.toThrow();
     });
   });
 
@@ -253,6 +273,35 @@ describe("DevtoService.convert", () => {
     it("throws when API returns 404", async () => {
       const service = makeService(null);
       await expect(service.convert(TEST_URL)).rejects.toThrow();
+    });
+  });
+
+  describe("upstream response validation", () => {
+    it("throws DevtoParseError when title is missing", async () => {
+      const noTitle = { ...SAMPLE_ARTICLE } as Record<string, unknown>;
+      delete noTitle.title;
+      const service = makeService(noTitle);
+      await expect(service.convert(TEST_URL)).rejects.toThrowError(
+        DevtoParseError,
+      );
+    });
+
+    it("throws DevtoParseError when body_markdown is not a string", async () => {
+      const badBody = { ...SAMPLE_ARTICLE, body_markdown: 42 };
+      const service = makeService(badBody);
+      await expect(service.convert(TEST_URL)).rejects.toThrowError(
+        DevtoParseError,
+      );
+    });
+
+    it("surfaces DEVTO.PARSE_FAILED and names the failed field", async () => {
+      const noTitle = { ...SAMPLE_ARTICLE } as Record<string, unknown>;
+      delete noTitle.title;
+      const service = makeService(noTitle);
+      await expect(service.convert(TEST_URL)).rejects.toMatchObject({
+        code: "DEVTO.PARSE_FAILED",
+      });
+      await expect(service.convert(TEST_URL)).rejects.toThrowError(/title/);
     });
   });
 

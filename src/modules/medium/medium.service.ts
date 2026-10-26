@@ -1,10 +1,23 @@
 import { FreediumService } from "../../integrations/freedium/freedium.service.ts";
-import { buildFrontmatter, type ArticleMetadata } from "../../common/types/metadata.types.ts";
+import type { FreediumArticleMetadata } from "../../integrations/freedium/freedium.dto.ts";
+import {
+  ArticleMetadataSchema,
+  buildFrontmatter,
+  type ArticleMetadata,
+} from "../../common/types/metadata.types.ts";
 import { CacheService } from "../../core/cache/cache.service.ts";
 import { config } from "../../core/config/config.ts";
-import type { ConvertResult, Provider } from "../../common/types/provider.interface.ts";
+import type {
+  ConvertResult,
+  Provider,
+} from "../../common/types/provider.interface.ts";
+import { formatZodIssues } from "../../common/errors/ingest-error.ts";
 import { isValidMediumUrl } from "./medium.dto.ts";
-import { FreediumUnavailableError, MediumInvalidUrlError, MediumParseError } from "./errors/medium-errors.ts";
+import {
+  FreediumUnavailableError,
+  MediumInvalidUrlError,
+  MediumParseError,
+} from "./errors/medium-errors.ts";
 
 /**
  * Medium provider — converts Medium article URLs to markdown.
@@ -63,7 +76,9 @@ export class MediumService implements Provider {
       articleData = await this.freedium.fetchArticleData(url);
     } catch (error) {
       // Non-fatal: download markdown is the primary source
-      console.error(`Failed to fetch article data: ${error instanceof Error ? error.message : "unknown"}`);
+      console.error(
+        `Failed to fetch article data: ${error instanceof Error ? error.message : "unknown"}`,
+      );
     }
 
     // 3. Parse frontmatter from download markdown
@@ -71,7 +86,11 @@ export class MediumService implements Provider {
     const downloadMetadata = this.parseFrontmatter(downloadFm ?? "");
 
     // 4. Merge metadata: download frontmatter + article data enrichment
-    const metadata = this.mergeMetadata(downloadMetadata, articleData?.metadata, url);
+    const metadata = this.mergeMetadata(
+      downloadMetadata,
+      articleData?.metadata,
+      url,
+    );
 
     // 5. Replace <picture> HTML tags with markdown images + add cover image
     const enrichedBody = articleData
@@ -99,11 +118,15 @@ export class MediumService implements Provider {
   private parseFrontmatter(yaml: string): Partial<ArticleMetadata> {
     const get = (key: string): string | undefined => {
       // Single-quoted: match opening ' to closing ' (handles multi-line, '' escaping)
-      const singleMatch = yaml.match(new RegExp(`^${key}:\\s*('(?:[^']|'')*')`, "m"));
+      const singleMatch = yaml.match(
+        new RegExp(`^${key}:\\s*('(?:[^']|'')*')`, "m"),
+      );
       if (singleMatch) return this.stripYamlQuotes(singleMatch[1] ?? "");
 
       // Double-quoted: match opening " to closing " (handles multi-line, \" escaping)
-      const doubleMatch = yaml.match(new RegExp(`^${key}:\\s*("(?:[^"\\\\]|\\\\.)*")`, "m"));
+      const doubleMatch = yaml.match(
+        new RegExp(`^${key}:\\s*("(?:[^"\\\\]|\\\\.)*")`, "m"),
+      );
       if (doubleMatch) return this.stripYamlQuotes(doubleMatch[1] ?? "");
 
       // Unquoted: match until end of line
@@ -122,7 +145,9 @@ export class MediumService implements Provider {
 
     const tagsMatch = yaml.match(/^tags:\n((?:\s*-\s+.+\n?)+)/m);
     const tags = tagsMatch?.[1]
-      ? [...tagsMatch[1].matchAll(/\s*-\s+(.+)/g)].map((m) => this.stripYamlQuotes(m[1] ?? ""))
+      ? [...tagsMatch[1].matchAll(/\s*-\s+(.+)/g)].map((m) =>
+          this.stripYamlQuotes(m[1] ?? ""),
+        )
       : [];
 
     return {
@@ -138,8 +163,10 @@ export class MediumService implements Provider {
 
   private stripYamlQuotes(value: string): string {
     const trimmed = value.trim();
-    if ((trimmed.startsWith("'") && trimmed.endsWith("'")) ||
-        (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+    if (
+      (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    ) {
       return trimmed.slice(1, -1);
     }
     return trimmed;
@@ -149,10 +176,10 @@ export class MediumService implements Provider {
 
   private mergeMetadata(
     download: Partial<ArticleMetadata>,
-    article: { authorName: string | undefined; readingTime: string | undefined; sourceUrl: string } | undefined,
+    article: FreediumArticleMetadata | undefined,
     fallbackUrl: string,
   ): ArticleMetadata {
-    return {
+    const metadata: ArticleMetadata = {
       title: download.title ?? "",
       subtitle: download.subtitle,
       author: article?.authorName,
@@ -165,6 +192,14 @@ export class MediumService implements Provider {
       tags: download.tags ?? [],
       free: download.free,
     };
+
+    const parsed = ArticleMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      throw new MediumParseError(
+        `Invalid article metadata — ${formatZodIssues(parsed.error)}`,
+      );
+    }
+    return parsed.data;
   }
 
   // --- Image replacement ---
@@ -177,7 +212,10 @@ export class MediumService implements Provider {
    * Also injects the cover image (from metadata.postImage) after the H1 title,
    * since the cover is not part of the article body.
    */
-  private replaceImages(markdownBody: string, coverImage: string | undefined): string {
+  private replaceImages(
+    markdownBody: string,
+    coverImage: string | undefined,
+  ): string {
     // Replace <picture>...</picture> blocks with markdown image syntax
     let result = markdownBody.replace(
       /<picture>\s*<source[^>]*>\s*<source[^>]*>\s*<img[^>]*src="([^"]+)"[^>]*alt="([^"]*)"[^>]*\/>\s*<\/picture>/g,

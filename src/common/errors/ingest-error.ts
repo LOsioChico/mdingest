@@ -24,10 +24,20 @@ export class ValidationError extends IngestError {
       422,
       "VALIDATION.FAILED",
       "Request validation failed.",
-      zodError.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+      zodError.issues.map((i) => ({
+        path: i.path.join("."),
+        message: i.message,
+      })),
     );
     this.name = "ValidationError";
   }
+}
+
+/** Format Zod issues as "path: message" pairs — used in typed error reasons. */
+export function formatZodIssues(error: ZodError): string {
+  return error.issues
+    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .join("; ");
 }
 
 /** 429 — the rate-limit binding rejected the request. Window is fixed at 60s. */

@@ -1,5 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { FreediumService, type FreediumArticleMetadata } from "./freedium.service.ts";
+import { describe, it, expect, vi } from "vitest";
+import {
+  FreediumService,
+  type FreediumArticleMetadata,
+} from "./freedium.service.ts";
 
 // Access private methods for direct unit testing of pure functions.
 // These are pure functions with no side effects — testing them directly
@@ -35,7 +38,9 @@ describe("FreediumService.resolveRef", () => {
     const service = makeService();
     const data: unknown[] = [];
     expect(service.resolveRef("hello", data)).toBe("hello");
-    expect(service.resolveRef({ name: "test" }, data)).toEqual({ name: "test" });
+    expect(service.resolveRef({ name: "test" }, data)).toEqual({
+      name: "test",
+    });
     expect(service.resolveRef(true, data)).toBe(true);
   });
 });
@@ -54,7 +59,8 @@ describe("FreediumService.countEmbeddedPlaceholders", () => {
 
   it("counts multiple placeholders", () => {
     const service = makeService();
-    const md = "[Embedded content: a1b2]\n[Embedded content: c3d4]\n[Embedded content: e5f6]";
+    const md =
+      "[Embedded content: a1b2]\n[Embedded content: c3d4]\n[Embedded content: e5f6]";
     expect(service.countEmbeddedPlaceholders(md)).toBe(3);
   });
 
@@ -115,9 +121,7 @@ describe("FreediumService.extractMetadata", () => {
 
   it("falls back to mediumUrl when article.url is missing", () => {
     const service = makeService();
-    const data: unknown[] = [
-      { title: "No URL Article", authors: [] },
-    ];
+    const data: unknown[] = [{ title: "No URL Article", authors: [] }];
 
     const metadata = service.extractMetadata(
       data[0] as Record<string, unknown>,
@@ -130,9 +134,7 @@ describe("FreediumService.extractMetadata", () => {
 
   it("returns undefined authorName when authors array is empty", () => {
     const service = makeService();
-    const data: unknown[] = [
-      { title: "Test", authors: [] },
-    ];
+    const data: unknown[] = [{ title: "Test", authors: [] }];
 
     const metadata = service.extractMetadata(
       data[0] as Record<string, unknown>,
@@ -145,9 +147,7 @@ describe("FreediumService.extractMetadata", () => {
 
   it("prefixes postImage with freedium base URL", () => {
     const service = makeService();
-    const data: unknown[] = [
-      { postImage: "/img/cover.jpg" },
-    ];
+    const data: unknown[] = [{ postImage: "/img/cover.jpg" }];
 
     const metadata = service.extractMetadata(
       data[0] as Record<string, unknown>,
@@ -161,9 +161,7 @@ describe("FreediumService.extractMetadata", () => {
 
   it("returns undefined postImage when not present", () => {
     const service = makeService();
-    const data: unknown[] = [
-      { title: "No cover" },
-    ];
+    const data: unknown[] = [{ title: "No cover" }];
 
     const metadata = service.extractMetadata(
       data[0] as Record<string, unknown>,
@@ -172,5 +170,50 @@ describe("FreediumService.extractMetadata", () => {
     );
 
     expect(metadata.postImage).toBeUndefined();
+  });
+});
+
+function mockDataResponse(data: unknown[]): void {
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    text: () => Promise.resolve(JSON.stringify({ nodes: [{}, { data }] })),
+  }) as never;
+}
+
+describe("FreediumService.fetchArticleData validation", () => {
+  it("returns metadata for a valid devalue payload", async () => {
+    const data: unknown[] = [
+      { slug: "test", eager: 1 },
+      { article: 2 },
+      { title: 3, authors: [4], url: "https://medium.com/@user/test" },
+      "Test Article",
+      { name: 5 },
+      "Jane Doe",
+    ];
+    mockDataResponse(data);
+
+    const result = await new FreediumService().fetchArticleData(
+      "https://medium.com/@user/test",
+    );
+
+    expect(result.metadata.title).toBe("Test Article");
+    expect(result.metadata.authorName).toBe("Jane Doe");
+    expect(result.metadata.sourceUrl).toBe("https://medium.com/@user/test");
+  });
+
+  it("throws naming the field when a resolved value has the wrong type", async () => {
+    const data: unknown[] = [
+      { slug: "test", eager: 1 },
+      { article: 2 },
+      { title: 3, authors: [] },
+      123, // title resolves to a number, not a string
+    ];
+    mockDataResponse(data);
+
+    await expect(
+      new FreediumService().fetchArticleData("https://medium.com/@user/test"),
+    ).rejects.toThrowError(/title/);
   });
 });

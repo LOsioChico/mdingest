@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { SubstackService } from "./substack.service.ts";
 import { CacheService } from "../../core/cache/cache.service.ts";
-import { SubstackPaidPostError } from "./errors/substack-errors.ts";
+import {
+  SubstackPaidPostError,
+  SubstackParseError,
+} from "./errors/substack-errors.ts";
 
 const SAMPLE_POST = {
   title: "Test Substack Post",
@@ -23,7 +26,9 @@ const PAID_POST = {
   body_html: "<p>Truncated preview only...</p>",
 };
 
-function makeMockFetch(post: typeof SAMPLE_POST | null): ReturnType<typeof vi.fn> {
+function makeMockFetch(
+  post: Record<string, unknown> | null,
+): ReturnType<typeof vi.fn> {
   if (post) {
     return vi.fn().mockResolvedValue({
       ok: true,
@@ -39,7 +44,9 @@ function makeMockFetch(post: typeof SAMPLE_POST | null): ReturnType<typeof vi.fn
   });
 }
 
-function makeService(post: typeof SAMPLE_POST | null = SAMPLE_POST): SubstackService {
+function makeService(
+  post: Record<string, unknown> | null = SAMPLE_POST,
+): SubstackService {
   const cache = new CacheService();
   const service = new SubstackService(cache);
   globalThis.fetch = makeMockFetch(post) as never;
@@ -102,7 +109,9 @@ describe("SubstackService.convert", () => {
   describe("paid post detection", () => {
     it("throws SubstackPaidPostError for only_paid audience", async () => {
       const service = makeService(PAID_POST);
-      await expect(service.convert(TEST_URL)).rejects.toThrow(SubstackPaidPostError);
+      await expect(service.convert(TEST_URL)).rejects.toThrow(
+        SubstackPaidPostError,
+      );
     });
   });
 
@@ -123,7 +132,9 @@ describe("SubstackService.convert", () => {
   describe("URL validation", () => {
     it("throws SubstackInvalidUrlError for non-Substack URL", async () => {
       const service = makeService();
-      await expect(service.convert("https://example.com/article")).rejects.toThrow();
+      await expect(
+        service.convert("https://example.com/article"),
+      ).rejects.toThrow();
     });
   });
 
@@ -131,6 +142,35 @@ describe("SubstackService.convert", () => {
     it("throws when API returns 404", async () => {
       const service = makeService(null);
       await expect(service.convert(TEST_URL)).rejects.toThrow();
+    });
+  });
+
+  describe("upstream response validation", () => {
+    it("throws SubstackParseError when title is missing", async () => {
+      const noTitle = { ...SAMPLE_POST } as Record<string, unknown>;
+      delete noTitle.title;
+      const service = makeService(noTitle);
+      await expect(service.convert(TEST_URL)).rejects.toThrowError(
+        SubstackParseError,
+      );
+    });
+
+    it("throws SubstackParseError when body_html is not a string", async () => {
+      const badBody = { ...SAMPLE_POST, body_html: 42 };
+      const service = makeService(badBody);
+      await expect(service.convert(TEST_URL)).rejects.toThrowError(
+        SubstackParseError,
+      );
+    });
+
+    it("surfaces SUBSTACK.PARSE_FAILED and names the failed field", async () => {
+      const noTitle = { ...SAMPLE_POST } as Record<string, unknown>;
+      delete noTitle.title;
+      const service = makeService(noTitle);
+      await expect(service.convert(TEST_URL)).rejects.toMatchObject({
+        code: "SUBSTACK.PARSE_FAILED",
+      });
+      await expect(service.convert(TEST_URL)).rejects.toThrowError(/title/);
     });
   });
 
@@ -147,7 +187,9 @@ describe("SubstackService.convert", () => {
   describe("matches()", () => {
     it("returns true for substack.com URL", () => {
       const service = makeService();
-      expect(service.matches("https://pub.substack.com/p/some-slug")).toBe(true);
+      expect(service.matches("https://pub.substack.com/p/some-slug")).toBe(
+        true,
+      );
     });
 
     it("returns true for custom domain URL", () => {

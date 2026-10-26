@@ -3,6 +3,7 @@ import { createDocument } from "@mixmark-io/domino";
 import { CacheService } from "../../core/cache/cache.service.ts";
 import { config } from "../../core/config/config.ts";
 import {
+  ArticleMetadataSchema,
   buildFrontmatter,
   type ArticleMetadata,
 } from "../../common/types/metadata.types.ts";
@@ -10,10 +11,13 @@ import type {
   ConvertResult,
   Provider,
 } from "../../common/types/provider.interface.ts";
+import { formatZodIssues } from "../../common/errors/ingest-error.ts";
 import {
   isValidSubstackUrl,
   isSubstackHomeUrl,
   parseSubstackUrl,
+  SubstackPostResponseSchema,
+  type SubstackPostResponse,
 } from "./substack.dto.ts";
 import {
   SubstackInvalidUrlError,
@@ -32,24 +36,6 @@ import {
  * HTML→Markdown via turndown + custom rules for Substack-specific components:
  * footnotes, LaTeX, YouTube/Twitter embeds, mentions, subscribe buttons.
  */
-
-/** Substack API post response — only the fields we use. */
-interface SubstackPostResponse {
-  readonly title: string;
-  readonly subtitle: string;
-  readonly slug: string;
-  readonly canonical_url: string;
-  readonly post_date: string;
-  readonly updated_at: string | null;
-  readonly audience: string;
-  readonly wordcount: number;
-  readonly body_html: string;
-  readonly cover_image: string | null;
-  readonly publishedBylines: ReadonlyArray<{
-    readonly name: string;
-    readonly handle: string;
-  }>;
-}
 
 export class SubstackService implements Provider {
   readonly name = "substack";
@@ -146,6 +132,7 @@ export class SubstackService implements Provider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
 
+    let data: unknown;
     try {
       const response = await fetch(apiUrl, {
         headers: { "User-Agent": config.userAgent },
@@ -159,7 +146,7 @@ export class SubstackService implements Provider {
         );
       }
 
-      return (await response.json()) as SubstackPostResponse;
+      data = await response.json();
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         throw new SubstackUnavailableError(
@@ -171,6 +158,14 @@ export class SubstackService implements Provider {
     } finally {
       clearTimeout(timeout);
     }
+
+    const validated = SubstackPostResponseSchema.safeParse(data);
+    if (!validated.success) {
+      throw new SubstackParseError(
+        `Invalid API response — ${formatZodIssues(validated.error)}`,
+      );
+    }
+    return validated.data;
   }
 
   // --- HTML→Markdown with custom Substack rules ---
@@ -385,7 +380,7 @@ export class SubstackService implements Provider {
   ): ArticleMetadata {
     const author = post.publishedBylines?.[0]?.name ?? "Unknown";
 
-    return {
+    const metadata: ArticleMetadata = {
       title: post.title,
       subtitle: post.subtitle || undefined,
       author,
@@ -398,6 +393,14 @@ export class SubstackService implements Provider {
       tags: [],
       free: post.audience === "everyone",
     };
+
+    const parsed = ArticleMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      throw new SubstackParseError(
+        `Invalid article metadata — ${formatZodIssues(parsed.error)}`,
+      );
+    }
+    return parsed.data;
   }
 
   /**
@@ -405,7 +408,10 @@ export class SubstackService implements Provider {
    * Substack body_html does not contain an H1 (title is metadata, not body),
    * so we inject the cover before all content.
    */
-  private injectCoverImage(body: string, coverImage: string | null): string {
+  private injectCoverImage(
+    body: string,
+    coverImage: string | null | undefined,
+  ): string {
     if (!coverImage) return body;
     return `![Cover image](${coverImage})\n\n${body}`;
   }
@@ -454,6 +460,13 @@ export class SubstackService implements Provider {
       free: get("free") === "true",
     };
 
-    return { metadata, markdown: cached };
+    const parsed = ArticleMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      throw new SubstackParseError(
+        `Cache corruption: invalid metadata for ${url} — ${formatZodIssues(parsed.error)}`,
+      );
+    }
+
+    return { metadata: parsed.data, markdown: cached };
   }
 }

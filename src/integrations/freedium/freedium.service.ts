@@ -1,4 +1,17 @@
 import { config } from "../../core/config/config.ts";
+import { formatZodIssues } from "../../common/errors/ingest-error.ts";
+import {
+  FreediumArticleMetadataSchema,
+  type FreediumArticleData,
+  type FreediumArticleMetadata,
+  type FreediumMarkdownResponse,
+} from "./freedium.dto.ts";
+
+export type {
+  FreediumArticleData,
+  FreediumArticleMetadata,
+  FreediumMarkdownResponse,
+};
 
 /**
  * HTTP client for Freedium mirror.
@@ -19,31 +32,7 @@ import { config } from "../../core/config/config.ts";
  * is the Medium article fetcher this project depends on.
  */
 
-export interface FreediumMarkdownResponse {
-  readonly markdown: string;
-  readonly url: string;
-}
-
-export interface FreediumArticleMetadata {
-  readonly title: string;
-  readonly subtitle: string | undefined;
-  readonly authorName: string | undefined;
-  readonly readingTime: string | undefined;
-  readonly date: string | undefined;
-  readonly publishedAt: string | undefined;
-  readonly updatedAt: string | undefined;
-  readonly isFree: boolean | undefined;
-  readonly postImage: string | undefined;
-  readonly sourceUrl: string;
-  readonly tags: string[];
-}
-
-export interface FreediumArticleData {
-  readonly metadata: FreediumArticleMetadata;
-}
-
 export class FreediumService {
-
   /**
    * Fetch finished markdown from Freedium's download endpoint.
    * Returns markdown with frontmatter, tags, code languages.
@@ -86,7 +75,9 @@ export class FreediumService {
         return { markdown, url: downloadUrl };
       }
 
-      console.error(`Attempt ${attempt}: ${placeholders} embedded placeholders, retrying`);
+      console.error(
+        `Attempt ${attempt}: ${placeholders} embedded placeholders, retrying`,
+      );
 
       if (!best || placeholders < best.placeholders) {
         best = { markdown, placeholders };
@@ -148,7 +139,10 @@ export class FreediumService {
       | undefined;
     if (eagerError) {
       const status = eagerError.status ?? "unknown";
-      const message = typeof eagerError.message === "string" ? eagerError.message : "Freedium article fetch failed";
+      const message =
+        typeof eagerError.message === "string"
+          ? eagerError.message
+          : "Freedium article fetch failed";
       throw new Error(`Freedium data error (status ${status}): ${message}`);
     }
 
@@ -161,18 +155,22 @@ export class FreediumService {
     }
 
     const metadata = this.extractMetadata(article, nodeData, mediumUrl);
+    const parsed = FreediumArticleMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      throw new Error(
+        `Freedium data: invalid article metadata — ${formatZodIssues(parsed.error)}`,
+        { cause: parsed.error },
+      );
+    }
 
-    return { metadata };
+    return { metadata: parsed.data };
   }
 
   // --- Private helpers ---
 
   private async fetchWithTimeout(url: string): Promise<Response> {
     const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      config.fetchTimeoutMs,
-    );
+    const timeout = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
 
     try {
       const response = await fetch(url, {
@@ -213,7 +211,7 @@ export class FreediumService {
   ): FreediumArticleMetadata {
     const resolve = (ref: unknown) => this.resolveRef(ref, data);
 
-    const title = resolve(article.title) as string | undefined ?? "";
+    const title = (resolve(article.title) as string | undefined) ?? "";
     const subtitle = resolve(article.subtitle) as string | undefined;
     const readingTime = resolve(article.readingTime) as string | undefined;
     const date = resolve(article.date) as string | undefined;
@@ -221,7 +219,7 @@ export class FreediumService {
     const updatedAt = resolve(article.updatedAt) as string | undefined;
     const isFree = resolve(article.isFree) as boolean | undefined;
     const postImage = resolve(article.postImage) as string | undefined;
-    const sourceUrl = resolve(article.url) as string | undefined ?? mediumUrl;
+    const sourceUrl = (resolve(article.url) as string | undefined) ?? mediumUrl;
 
     // Authors is a ref to an array of refs to { name, avatar } objects
     const authorsRef = resolve(article.authors);

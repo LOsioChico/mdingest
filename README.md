@@ -215,17 +215,17 @@ Errors return `{ code, message, details?, traceId }` with namespaced codes (`MED
 
 ### Backend
 
-| Tool                      | Role                                          |
-| ------------------------- | --------------------------------------------- |
-| Bun                       | CLI / local dev runtime                       |
-| Cloudflare Workers        | Production runtime — API + static assets      |
-| Wrangler                  | Local dev + deploys (`wrangler dev/deploy`)   |
-| Zod                       | Runtime validation (config, params, metadata) |
-| lru-cache                 | In-memory cache with TTL (per-isolate)        |
-| turndown + domino         | HTML→Markdown (Substack provider)             |
-| oxlint                    | Linting                                       |
-| citty                     | CLI arg parsing + `--help` generation         |
-| @modelcontextprotocol/sdk | MCP server: stdio + streamable HTTP           |
+| Tool                      | Role                                                              |
+| ------------------------- | ----------------------------------------------------------------- |
+| Bun                       | CLI / local dev runtime                                           |
+| Cloudflare Workers        | Production runtime — API + static assets                          |
+| Wrangler                  | Local dev + deploys (`wrangler dev/deploy`)                       |
+| Zod                       | Runtime validation (config, params, upstream responses, metadata) |
+| lru-cache                 | In-memory cache with TTL (per-isolate)                            |
+| turndown + domino         | HTML→Markdown (Substack provider)                                 |
+| oxlint                    | Linting                                                           |
+| citty                     | CLI arg parsing + `--help` generation                             |
+| @modelcontextprotocol/sdk | MCP server: stdio + streamable HTTP                               |
 
 ### Frontend
 

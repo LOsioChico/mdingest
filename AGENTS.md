@@ -233,14 +233,14 @@ All errors follow the standard shape: `{ code, message, details?, traceId }`
 | `VALIDATION.FAILED`           | 422  | Bad query params (Zod schema). `details[]` contains Zod issue messages.          |
 | `MEDIUM.INVALID_URL`          | 400  | URL is not a Medium article (service-level check)                                |
 | `MEDIUM.FREEDIUM_UNAVAILABLE` | 503  | Freedium mirror down or timed out                                                |
-| `MEDIUM.PARSE_FAILED`         | 502  | Article data parsing failed (e.g. cache corruption)                              |
+| `MEDIUM.PARSE_FAILED`         | 502  | Invalid upstream response or data parsing failed (e.g. cache corruption)         |
 | `DEVTO.INVALID_URL`           | 400  | URL is not a Dev.to article                                                      |
 | `DEVTO.UNAVAILABLE`           | 503  | Dev.to API down or timed out                                                     |
-| `DEVTO.PARSE_FAILED`          | 502  | Article data parsing failed (e.g. cache corruption)                              |
+| `DEVTO.PARSE_FAILED`          | 502  | Invalid upstream response or data parsing failed (e.g. cache corruption)         |
 | `SUBSTACK.INVALID_URL`        | 400  | URL is not a Substack article                                                    |
 | `SUBSTACK.PAID_POST`          | 403  | Post is behind a paywall (only free posts ingested)                              |
 | `SUBSTACK.UNAVAILABLE`        | 503  | Substack API down or timed out                                                   |
-| `SUBSTACK.PARSE_FAILED`       | 502  | Article data parsing failed (e.g. cache corruption)                              |
+| `SUBSTACK.PARSE_FAILED`       | 502  | Invalid upstream response or data parsing failed (e.g. cache corruption)         |
 | `INTERNAL.ERROR`              | 500  | Unexpected error                                                                 |
 | `NOT_FOUND`                   | 404  | Unknown route                                                                    |
 | `RATE_LIMITED`                | 429  | Too many requests (30/min per IP). `details.retryAfter` has seconds until reset. |

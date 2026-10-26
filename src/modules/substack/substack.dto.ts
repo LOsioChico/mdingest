@@ -22,7 +22,12 @@ export function isSubstackHomeUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     const pathParts = parsed.pathname.split("/").filter(Boolean);
-    return pathParts.length >= 3 && pathParts[0] === "home" && pathParts[1] === "post" && (pathParts[2]?.startsWith("p-") ?? false);
+    return (
+      pathParts.length >= 3 &&
+      pathParts[0] === "home" &&
+      pathParts[1] === "post" &&
+      (pathParts[2]?.startsWith("p-") ?? false)
+    );
   } catch {
     return false;
   }
@@ -36,7 +41,9 @@ export function isSubstackHomeUrl(url: string): boolean {
  *   https://platformer.substack.com/p/why-leaving → { domain: "platformer.substack.com", slug: "why-leaving" }
  *   https://www.argmin.net/p/microconferences     → { domain: "www.argmin.net", slug: "microconferences" }
  */
-export function parseSubstackUrl(url: string): { domain: string; slug: string } | null {
+export function parseSubstackUrl(
+  url: string,
+): { domain: string; slug: string } | null {
   try {
     const parsed = new URL(url);
     const pathParts = parsed.pathname.split("/").filter(Boolean);
@@ -51,8 +58,33 @@ export const SubstackConvertQuerySchema = z.object({
   url: z
     .string()
     .url()
-    .refine(isValidSubstackUrl, "Must be a Substack article URL (https://{pub}/p/{slug})"),
+    .refine(
+      isValidSubstackUrl,
+      "Must be a Substack article URL (https://{pub}/p/{slug})",
+    ),
   format: z.enum(["markdown", "json"]).default("markdown"),
 });
 
 export type SubstackConvertQuery = z.infer<typeof SubstackConvertQuerySchema>;
+
+/**
+ * Substack API post response — only the fields we use.
+ * safeParse'd at the fetch boundary; unknown upstream keys are stripped.
+ * Nullable+optional mirrors the code's `||`/`??`/`?.` fallbacks.
+ */
+export const SubstackPostResponseSchema = z.object({
+  title: z.string().min(1),
+  subtitle: z.string().nullable().optional(),
+  canonical_url: z.string().nullable().optional(),
+  post_date: z.string(),
+  updated_at: z.string().nullable().optional(),
+  audience: z.string(),
+  body_html: z.string(),
+  cover_image: z.string().nullable().optional(),
+  publishedBylines: z
+    .array(z.object({ name: z.string() }))
+    .nullable()
+    .optional(),
+});
+
+export type SubstackPostResponse = z.infer<typeof SubstackPostResponseSchema>;

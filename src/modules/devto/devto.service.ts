@@ -1,9 +1,25 @@
 import { CacheService } from "../../core/cache/cache.service.ts";
 import { config } from "../../core/config/config.ts";
-import { buildFrontmatter, type ArticleMetadata } from "../../common/types/metadata.types.ts";
-import type { ConvertResult, Provider } from "../../common/types/provider.interface.ts";
-import { isValidDevtoUrl } from "./devto.dto.ts";
-import { DevtoInvalidUrlError, DevtoUnavailableError, DevtoParseError } from "./errors/devto-errors.ts";
+import {
+  ArticleMetadataSchema,
+  buildFrontmatter,
+  type ArticleMetadata,
+} from "../../common/types/metadata.types.ts";
+import type {
+  ConvertResult,
+  Provider,
+} from "../../common/types/provider.interface.ts";
+import { formatZodIssues } from "../../common/errors/ingest-error.ts";
+import {
+  isValidDevtoUrl,
+  DevtoArticleResponseSchema,
+  type DevtoArticleResponse,
+} from "./devto.dto.ts";
+import {
+  DevtoInvalidUrlError,
+  DevtoUnavailableError,
+  DevtoParseError,
+} from "./errors/devto-errors.ts";
 
 /**
  * Dev.to provider — converts Dev.to article URLs to markdown.
@@ -17,24 +33,6 @@ import { DevtoInvalidUrlError, DevtoUnavailableError, DevtoParseError } from "./
  */
 
 const DEVTO_API_BASE = "https://dev.to/api/articles";
-
-/** Forem API article response — only the fields we use. */
-interface DevtoArticleResponse {
-  readonly title: string;
-  readonly description: string;
-  readonly body_markdown: string;
-  readonly published_timestamp: string;
-  readonly edited_at: string | null;
-  readonly reading_time_minutes: number;
-  readonly canonical_url: string;
-  readonly url: string;
-  readonly cover_image: string | null;
-  readonly tag_list: string;
-  readonly user: {
-    readonly name: string;
-    readonly username: string;
-  };
-}
 
 export class DevtoService implements Provider {
   readonly name = "devto";
@@ -79,6 +77,7 @@ export class DevtoService implements Provider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), config.fetchTimeoutMs);
 
+    let data: unknown;
     try {
       const response = await fetch(apiUrl, {
         headers: { "User-Agent": config.userAgent },
@@ -87,19 +86,31 @@ export class DevtoService implements Provider {
       });
 
       if (!response.ok) {
-        throw new Error(`Dev.to API returned ${response.status}: ${response.statusText}`);
+        throw new Error(
+          `Dev.to API returned ${response.status}: ${response.statusText}`,
+        );
       }
 
-      return await response.json() as DevtoArticleResponse;
+      data = await response.json();
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        throw new DevtoUnavailableError(`Request timed out after ${config.fetchTimeoutMs}ms`);
+        throw new DevtoUnavailableError(
+          `Request timed out after ${config.fetchTimeoutMs}ms`,
+        );
       }
       const reason = error instanceof Error ? error.message : "Unknown error";
       throw new DevtoUnavailableError(reason);
     } finally {
       clearTimeout(timeout);
     }
+
+    const parsed = DevtoArticleResponseSchema.safeParse(data);
+    if (!parsed.success) {
+      throw new DevtoParseError(
+        `Invalid API response — ${formatZodIssues(parsed.error)}`,
+      );
+    }
+    return parsed.data;
   }
 
   /** Extract /{username}/{slug} from a Dev.to URL for the API path. */
@@ -228,12 +239,18 @@ export class DevtoService implements Provider {
       .replace(/&#39;/g, "'");
   }
 
-  private buildMetadata(article: DevtoArticleResponse, fallbackUrl: string): ArticleMetadata {
+  private buildMetadata(
+    article: DevtoArticleResponse,
+    fallbackUrl: string,
+  ): ArticleMetadata {
     const tags = article.tag_list
-      ? article.tag_list.split(",").map((t) => t.trim()).filter(Boolean)
+      ? article.tag_list
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
       : [];
 
-    return {
+    const metadata: ArticleMetadata = {
       title: article.title,
       subtitle: this.decodeHtmlEntities(article.description) || undefined,
       author: article.user.name,
@@ -246,13 +263,24 @@ export class DevtoService implements Provider {
       tags,
       free: true,
     };
+
+    const parsed = ArticleMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      throw new DevtoParseError(
+        `Invalid article metadata — ${formatZodIssues(parsed.error)}`,
+      );
+    }
+    return parsed.data;
   }
 
   /**
    * Inject cover image after the first H1 heading.
    * The cover is not part of body_markdown — it's a separate API field.
    */
-  private injectCoverImage(body: string, coverImage: string | null): string {
+  private injectCoverImage(
+    body: string,
+    coverImage: string | null | undefined,
+  ): string {
     if (!coverImage) return body;
     const h1Match = body.match(/^# .+$/m);
     if (h1Match?.index === undefined) return body;
@@ -272,11 +300,16 @@ export class DevtoService implements Provider {
 
     const get = (key: string): string | undefined => {
       // Double-quoted: "value" (with \" and \\ escapes)
-      const doubleMatch = fm.match(new RegExp(`^${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "m"));
-      if (doubleMatch) return doubleMatch[1]?.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+      const doubleMatch = fm.match(
+        new RegExp(`^${key}:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "m"),
+      );
+      if (doubleMatch)
+        return doubleMatch[1]?.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
 
       // Single-quoted: 'value' (with '' escaping, may span multiple lines)
-      const singleMatch = fm.match(new RegExp(`^${key}:\\s*'((?:[^']|'')*)'`, "m"));
+      const singleMatch = fm.match(
+        new RegExp(`^${key}:\\s*'((?:[^']|'')*)'`, "m"),
+      );
       if (singleMatch) return singleMatch[1]?.replace(/''/g, "'");
 
       // Unquoted: until end of line
@@ -305,6 +338,13 @@ export class DevtoService implements Provider {
       free: true,
     };
 
-    return { metadata, markdown: cached };
+    const parsed = ArticleMetadataSchema.safeParse(metadata);
+    if (!parsed.success) {
+      throw new DevtoParseError(
+        `Cache corruption: invalid metadata for ${url} — ${formatZodIssues(parsed.error)}`,
+      );
+    }
+
+    return { metadata: parsed.data, markdown: cached };
   }
 }
